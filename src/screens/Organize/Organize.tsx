@@ -1,0 +1,737 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { useAtomStore } from "../../store/atoms";
+import { Modal, ModalHeader, ModalBody } from "../../components/ui/modal";
+import { SearchBar } from "../../components/ui/search-bar";
+import { ModalWrapper } from "../../components/ui/modal-wrapper";
+import { PencilIcon, ArrowUpIcon, TrashIcon, PlusIcon, LockIcon, UnlockIcon, XIcon, LinkIcon, StarIcon } from "lucide-react";
+
+interface OrganizeProps {
+  open: boolean;
+  onClose: () => void;
+  initialType?: 'Categories' | 'Tags' | 'Creators';
+  onCreatorSelect?: (creator: string) => void;
+}
+
+export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorSelect }: OrganizeProps): JSX.Element => {
+  const {
+    categories,
+    tags,
+    creators,
+    fetchCategories,
+    fetchTags,
+    fetchCreators,
+    fetchCreatorTags,
+    addCategory,
+    addTag,
+    addCreator,
+    updateCategory,
+    updateTag,
+    updateCreator,
+    deleteCategory,
+    deleteTag,
+    deleteCreator,
+    mergeCategory,
+    mergeTag,
+    mergeCreator,
+    assignTagToCategory,
+    removeTagFromCategory,
+    assignTagToCreator,
+    removeTagFromCreator,
+    getCategoryTags,
+    getCreatorTags,
+    toggleTag,
+    setDefaultCategory,
+    defaultCategoryId
+  } = useAtomStore();
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState<'Categories' | 'Tags' | 'Creators'>(initialType);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingLinks, setEditingLinks] = useState<{link1: string; link2: string; link3: string}>({
+    link1: '',
+    link2: '',
+    link3: ''
+  });
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemDescription, setNewItemDescription] = useState('');
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  const [mergeSourceId, setMergeSourceId] = useState<number | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagSearch, setTagSearch] = useState('');
+
+  useEffect(() => {
+    const initializeData = async () => {
+      await Promise.all([
+        fetchCategories(),
+        fetchTags(),
+        fetchCreators(),
+        fetchCreatorTags()
+      ]);
+    };
+    
+    initializeData();
+  }, [fetchCategories, fetchTags, fetchCreators, fetchCreatorTags]);
+
+  useEffect(() => {
+    setSelectedType(initialType);
+  }, [initialType]);
+
+  const getItems = () => {
+    switch (selectedType) {
+      case 'Categories':
+        return categories;
+      case 'Tags':
+        return tags;
+      case 'Creators':
+        return creators;
+      default:
+        return [];
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!newItemName) return;
+
+    switch (selectedType) {
+      case 'Categories':
+        await addCategory({ name: newItemName, description: newItemDescription });
+        break;
+      case 'Tags':
+        await addTag({ name: newItemName, count: 0 });
+        break;
+      case 'Creators':
+        await addCreator({ name: newItemName, count: 0 });
+        break;
+    }
+
+    setNewItemName('');
+    setNewItemDescription('');
+    setIsAddDialogOpen(false);
+  };
+
+  const handleEdit = (id: number, name: string, item?: any) => {
+    setEditingId(id);
+    setEditingName(name);
+    if (selectedType === 'Creators' && item) {
+      setEditingLinks({
+        link1: item.link_1 || '',
+        link2: item.link_2 || '',
+        link3: item.link_3 || ''
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!editingId) return;
+
+    switch (selectedType) {
+      case 'Categories':
+        if (editingName) await updateCategory(editingId, editingName);
+        break;
+      case 'Tags':
+        if (editingName) await updateTag(editingId, editingName);
+        break;
+      case 'Creators':
+        await updateCreator(editingId, {
+          ...(editingName ? { name: editingName } : {}),
+          link_1: editingLinks.link1 || null,
+          link_2: editingLinks.link2 || null,
+          link_3: editingLinks.link3 || null
+        });
+        break;
+    }
+
+    setEditingId(null);
+    setEditingName('');
+    setEditingLinks({ link1: '', link2: '', link3: '' });
+  };
+
+  const handleDelete = async (id: number) => {
+    setDeleteItemId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteItemId) return;
+
+    switch (selectedType) {
+      case 'Categories':
+        await deleteCategory(deleteItemId);
+        break;
+      case 'Tags':
+        await deleteTag(deleteItemId);
+        break;
+      case 'Creators':
+        await deleteCreator(deleteItemId);
+        break;
+    }
+
+    setIsDeleteDialogOpen(false);
+    setDeleteItemId(null);
+  };
+
+  const handleMerge = async (sourceId: number) => {
+    setMergeSourceId(sourceId);
+    setIsMergeDialogOpen(true);
+  };
+
+  const confirmMerge = async () => {
+    if (!mergeSourceId || !mergeTargetId) return;
+
+    switch (selectedType) {
+      case 'Categories':
+        await mergeCategory(mergeSourceId, mergeTargetId);
+        break;
+      case 'Tags':
+        await mergeTag(mergeSourceId, mergeTargetId);
+        break;
+      case 'Creators':
+        await mergeCreator(mergeSourceId, mergeTargetId);
+        break;
+    }
+
+    setIsMergeDialogOpen(false);
+    setMergeSourceId(null);
+    setMergeTargetId(null);
+  };
+
+  const handleOpenSetTags = (itemId: number) => {
+    setSelectedItemId(itemId);
+    const itemTags = selectedType === 'Categories' 
+      ? getCategoryTags(itemId)
+      : getCreatorTags(itemId);
+    setSelectedTags(itemTags.map(tag => tag.name));
+    setTagSearch('');
+  };
+
+  const handleTagClick = (tagName: string) => {
+    if (!selectedTags.includes(tagName)) {
+      setSelectedTags([...selectedTags, tagName]);
+    }
+    setTagSearch('');
+  };
+
+  const handleCreateTag = () => {
+    if (tagSearch && !tags.find(t => t.name === tagSearch)) {
+      setSelectedTags([...selectedTags, tagSearch]);
+      setTagSearch('');
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setSelectedTags(selectedTags.filter(t => t !== tag));
+  };
+
+  const handleSaveTags = async () => {
+    if (!selectedItemId) return;
+
+    const existingTags = selectedType === 'Categories'
+      ? getCategoryTags(selectedItemId)
+      : getCreatorTags(selectedItemId);
+    const existingTagNames = existingTags.map(tag => tag.name);
+
+    // Remove tags that were unselected
+    for (const tag of existingTags) {
+      if (!selectedTags.includes(tag.name)) {
+        if (selectedType === 'Categories') {
+          await removeTagFromCategory(selectedItemId, tag.id);
+        } else {
+          await removeTagFromCreator(selectedItemId, tag.id);
+        }
+      }
+    }
+
+    // Add newly selected tags
+    for (const tagName of selectedTags) {
+      if (!existingTagNames.includes(tagName)) {
+        const tag = tags.find(t => t.name === tagName);
+        if (tag) {
+          if (selectedType === 'Categories') {
+            await assignTagToCategory(selectedItemId, tag.id);
+          } else {
+            await assignTagToCreator(selectedItemId, tag.id);
+          }
+        }
+      }
+    }
+
+    setSelectedItemId(null);
+    setSelectedTags([]);
+    setTagSearch('');
+  };
+
+  const handleTogglePrivate = async (id: number, currentPrivate: boolean) => {
+    switch (selectedType) {
+      case 'Categories':
+        await updateCategory(id, undefined, !currentPrivate);
+        break;
+      case 'Tags':
+        await updateTag(id, undefined, !currentPrivate);
+        break;
+    }
+  };
+
+  const handleItemClick = (item: any) => {
+    switch (selectedType) {
+      case 'Categories':
+        setDefaultCategory(item.id === defaultCategoryId ? null : item.id);
+        break;
+      case 'Tags':
+        toggleTag(item.name);
+        break;
+      case 'Creators':
+        if (onCreatorSelect) {
+          onCreatorSelect(item.name);
+        }
+        break;
+    }
+    onClose();
+  };
+
+  const filteredItems = getItems().filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredTags = tags
+    .filter(tag => 
+      tag.name.toLowerCase().includes(tagSearch.toLowerCase()) &&
+      !selectedTags.includes(tag.name)
+    )
+    .slice(0, 12);
+
+  const showCreateTag = tagSearch && 
+    !tags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) &&
+    !selectedTags.includes(tagSearch);
+
+  const buttonStyle = "bg-gray-100 text-gray-900 border border-gray-900 shadow-sm hover:bg-gray-200";
+  const inputStyle = "bg-white text-gray-900 border border-gray-900 focus:ring-2 focus:ring-gray-900";
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <ModalWrapper className="max-w-4xl h-[80vh] flex flex-col">
+        <ModalHeader className="flex-none">
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={selectedType === 'Categories' ? 'default' : 'ghost'}
+                size="sm"
+                className={buttonStyle}
+                onClick={() => setSelectedType('Categories')}
+              >
+                Categories
+              </Button>
+              <Button
+                variant={selectedType === 'Tags' ? 'default' : 'ghost'}
+                size="sm"
+                className={buttonStyle}
+                onClick={() => setSelectedType('Tags')}
+              >
+                Tags
+              </Button>
+              <Button
+                variant={selectedType === 'Creators' ? 'default' : 'ghost'}
+                size="sm"
+                className={buttonStyle}
+                onClick={() => setSelectedType('Creators')}
+              >
+                Creators
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`${buttonStyle} border-dashed`}
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Add {selectedType === 'Categories' ? 'category' : selectedType.slice(0, -1).toLowerCase()}
+            </Button>
+          </div>
+        </ModalHeader>
+        <ModalBody className="flex-1 overflow-hidden">
+          <div className="h-full flex flex-col gap-4">
+            <SearchBar
+              placeholder={`Search ${selectedType.toLowerCase()}`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={inputStyle}
+            />
+
+            <div className="flex-1 overflow-y-auto">
+              {filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-gray-50 rounded-lg p-4 mb-2 last:mb-0"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div 
+                      className="flex-grow text-left cursor-pointer hover:text-gray-600"
+                      onClick={() => handleItemClick(item)}
+                    >
+                      {editingId === item.id ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className={inputStyle}
+                            placeholder="Name"
+                          />
+                          {selectedType === 'Creators' && (
+                            <>
+                              <Input
+                                value={editingLinks.link1}
+                                onChange={(e) => setEditingLinks({...editingLinks, link1: e.target.value})}
+                                className={inputStyle}
+                                placeholder="Link 1"
+                              />
+                              <Input
+                                value={editingLinks.link2}
+                                onChange={(e) => setEditingLinks({...editingLinks, link2: e.target.value})}
+                                className={inputStyle}
+                                placeholder="Link 2"
+                              />
+                              <Input
+                                value={editingLinks.link3}
+                                onChange={(e) => setEditingLinks({...editingLinks, link3: e.target.value})}
+                                className={inputStyle}
+                                placeholder="Link 3"
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingId(null);
+                                    setEditingName('');
+                                    setEditingLinks({ link1: '', link2: '', link3: '' });
+                                  }}
+                                  className={buttonStyle}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={handleSave}
+                                  className={buttonStyle}
+                                >
+                                  Save
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-900">{item.name}</span>
+                            {selectedType === 'Categories' && item.id === defaultCategoryId && (
+                              <StarIcon className="h-4 w-4 text-yellow-500" />
+                            )}
+                            <span className="text-gray-500 text-sm">
+                              ({item.count || 0} instances)
+                            </span>
+                          </div>
+                          {selectedType === 'Creators' && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {item.link_1 && (
+                                <a
+                                  href={item.link_1}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                                >
+                                  <LinkIcon className="h-3 w-3" />
+                                  Link 1
+                                </a>
+                              )}
+                              {item.link_2 && (
+                                <a
+                                  href={item.link_2}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                                >
+                                  <LinkIcon className="h-3 w-3" />
+                                  Link 2
+                                </a>
+                              )}
+                              {item.link_3 && (
+                                <a
+                                  href={item.link_3}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                                >
+                                  <LinkIcon className="h-3 w-3" />
+                                  Link 3
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {editingId !== item.id && (
+                      <div className="flex gap-2">
+                        {(selectedType === 'Categories' || selectedType === 'Tags') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleTogglePrivate(item.id, item.is_private || false)}
+                            className={buttonStyle}
+                          >
+                            {item.is_private ? (
+                              <LockIcon className="h-4 w-4" />
+                            ) : (
+                              <UnlockIcon className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        {(selectedType === 'Categories' || selectedType === 'Creators') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenSetTags(item.id)}
+                            className={buttonStyle}
+                          >
+                            <PlusIcon className="h-4 w-4" />
+                            <span className="ml-2">Tags</span>
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(item.id, item.name, item)}
+                          className={buttonStyle}
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMerge(item.id)}
+                          className={buttonStyle}
+                        >
+                          <ArrowUpIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(item.id)}
+                          className={buttonStyle}
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedItemId === item.id && (
+                    <div className="mt-4 space-y-4">
+                      <Input
+                        placeholder="Add tag"
+                        value={tagSearch}
+                        onChange={(e) => setTagSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (filteredTags.length > 0) {
+                              handleTagClick(filteredTags[0].name);
+                            } else if (showCreateTag) {
+                              handleCreateTag();
+                            }
+                          }
+                        }}
+                        className={inputStyle}
+                      />
+
+                      {selectedTags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {selectedTags.map((tag) => (
+                            <Button
+                              key={tag}
+                              variant="secondary"
+                              size="sm"
+                              className={buttonStyle}
+                              onClick={() => handleRemoveTag(tag)}
+                              tabIndex={-1}
+                            >
+                              {tag}
+                              <XIcon className="h-4 w-4 ml-2" />
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+
+                      {(tagSearch || showCreateTag) && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                          {filteredTags.map((tag) => (
+                            <Button
+                              key={tag.id}
+                              variant="ghost"
+                              size="sm"
+                              className={`justify-start h-8 px-3 ${buttonStyle}`}
+                              onClick={() => handleTagClick(tag.name)}
+                            >
+                              {tag.name}
+                            </Button>
+                          ))}
+                          {showCreateTag && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`justify-start h-8 px-3 ${buttonStyle}`}
+                              onClick={handleCreateTag}
+                            >
+                              Create "{tagSearch}"
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedItemId(null);
+                            setSelectedTags([]);
+                            setTagSearch('');
+                          }}
+                          className={buttonStyle}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveTags}
+                          className={buttonStyle}
+                        >
+                          Save changes
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </ModalBody>
+      </ModalWrapper>
+
+      <Modal open={isAddDialogOpen} onClose={() => setIsAddDialogOpen(false)}>
+        <ModalWrapper>
+          <ModalHeader>Add {selectedType.slice(0, -1)}</ModalHeader>
+          <ModalBody>
+            <div className="space-y-4 py-4">
+              <Input
+                placeholder="Name"
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                className={inputStyle}
+              />
+              {selectedType === 'Categories' && (
+                <Input
+                  placeholder="Description"
+                  value={newItemDescription}
+                  onChange={(e) => setNewItemDescription(e.target.value)}
+                  className={inputStyle}
+                />
+              )}
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsAddDialogOpen(false)}
+                  className={buttonStyle}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAdd}
+                  className={buttonStyle}
+                >
+                  Save changes
+                </Button>
+              </div>
+            </div>
+          </ModalBody>
+        </ModalWrapper>
+      </Modal>
+
+      <Modal open={isMergeDialogOpen} onClose={() => setIsMergeDialogOpen(false)}>
+        <ModalWrapper>
+          <ModalHeader>Merge {selectedType.slice(0, -1)}</ModalHeader>
+          <ModalBody>
+            <div className="space-y-4 py-4">
+              <SearchBar
+                placeholder={`Search target ${selectedType.toLowerCase()}`}
+                onChange={(e) => {
+                  const target = getItems().find(item => 
+                    item.name.toLowerCase().includes(e.target.value.toLowerCase()) &&
+                    item.id !== mergeSourceId
+                  );
+                  if (target) {
+                    setMergeTargetId(target.id);
+                  }
+                }}
+                className={inputStyle}
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsMergeDialogOpen(false)}
+                  className={buttonStyle}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmMerge}
+                  disabled={!mergeTargetId}
+                  className={buttonStyle}
+                >
+                  Save changes
+                </Button>
+              </div>
+            </div>
+          </ModalBody>
+        </ModalWrapper>
+      </Modal>
+
+      <Modal open={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)}>
+        <ModalWrapper>
+          <ModalHeader>Delete {selectedType.slice(0, -1)}</ModalHeader>
+          <ModalBody>
+            <p className="text-gray-600">
+              Are you sure you want to delete this {selectedType.toLowerCase()}? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="ghost"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className={buttonStyle}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                className={buttonStyle}
+              >
+                Delete
+              </Button>
+            </div>
+          </ModalBody>
+        </ModalWrapper>
+      </Modal>
+    </Modal>
+  );
+};

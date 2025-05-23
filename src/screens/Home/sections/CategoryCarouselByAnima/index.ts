@@ -1,0 +1,1 @@
+export { CategoryCarouselByAnima } from "./CategoryCarouselByAnima";

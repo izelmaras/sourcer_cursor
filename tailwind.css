@@ -1,0 +1,82 @@
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .all-\[unset\] {
+    all: unset;
+  }
+}
+
+:root {
+  --body-font-family: "Plus Jakarta Sans", Helvetica;
+  --body-font-size: 14px;
+  --body-font-style: normal;
+  --body-font-weight: 400;
+  --body-letter-spacing: 0px;
+  --body-line-height: 140%;
+  --button-font-family: "Plus Jakarta Sans", Helvetica;
+  --button-font-size: 14px;
+  --button-font-style: normal;
+  --button-font-weight: 500;
+  --button-letter-spacing: 0px;
+  --button-line-height: 29px;
+  --white-white-ffffff: rgba(255, 255, 255, 1);
+  --x-small-header-font-family: "Plus Jakarta Sans", Helvetica;
+  --x-small-header-font-size: 14px;
+  --x-small-header-font-style: normal;
+  --x-small-header-font-weight: 600;
+  --x-small-header-letter-spacing: 0px;
+  --x-small-header-line-height: 140%;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 215 20.2% 65.1%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  [data-radix-dialog-close] {
+    display: none !important;
+  }
+}
