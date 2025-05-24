@@ -51,7 +51,7 @@ export const Home = (): JSX.Element => {
     initializeData();
   }, []);
 
-  const hasFilters = selectedTags.length > 0 || selectedContentTypes.length > 0 || searchTerm || defaultCategoryId !== null;
+  const hasFilters = selectedTags.length > 0 || selectedContentTypes.length > 0 || searchTerm || defaultCategoryId !== null || selectedCreator !== null;
 
   const handleContentTypeSelect = (type: string) => {
     setSelectedContentTypes(prev => {
@@ -116,6 +116,18 @@ export const Home = (): JSX.Element => {
                 onClick={() => useAtomStore.getState().setDefaultCategory(null)}
               >
                 Category: {selectedCategory.name}
+                <XIcon className="w-4 h-4 ml-2" />
+              </Button>
+            )}
+
+            {selectedCreator && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="bg-gray-900 text-white hover:bg-gray-800"
+                onClick={() => setSelectedCreator(null)}
+              >
+                Creator: {selectedCreator}
                 <XIcon className="w-4 h-4 ml-2" />
               </Button>
             )}
