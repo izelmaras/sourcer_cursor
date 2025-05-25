@@ -91,16 +91,16 @@ export const AddAndNavigationByAnima = ({
   return (
     <div className="flex flex-col w-full gap-4">
       <div className="flex flex-col sm:flex-row w-full gap-2">
-        <div className="relative flex-1 min-w-0">
+        <div className="relative flex-1 min-w-0 flex items-center gap-2">
           <SearchBar
             placeholder="Search"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pr-12"
+            className="w-full"
           />
           <button
             onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-            className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center hover:bg-gray-50 rounded-r-lg transition-colors"
+            className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-black bg-white hover:bg-gray-50 transition-colors"
           >
             {isFiltersExpanded ? (
               <ChevronDownIcon className="h-5 w-5" />

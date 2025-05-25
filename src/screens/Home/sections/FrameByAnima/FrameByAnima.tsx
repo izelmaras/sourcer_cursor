@@ -24,12 +24,12 @@ const Gallery = memo(({ atoms, onSelect }: {
 }) => {
   const navigate = useNavigate();
   const { deletingIds } = useAtomStore();
-  const [visibleCount, setVisibleCount] = useState(20);
+  const [visibleCount, setVisibleCount] = useState(12);
 
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-        setVisibleCount((prev) => prev + 20);
+        setVisibleCount((prev) => prev + 12);
       }
     };
     window.addEventListener('scroll', handleScroll);

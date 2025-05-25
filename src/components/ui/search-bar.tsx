@@ -14,7 +14,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
         <input
           type="search"
           className={cn(
-            "h-12 w-full pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder:text-gray-500 shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-900",
+            "h-14 w-full pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder:text-gray-500 border-2 border-black focus:outline-none focus:ring-2 focus:ring-gray-900",
             className
           )}
           ref={ref}
