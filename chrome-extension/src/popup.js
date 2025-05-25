@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const imageLinkInput = document.getElementById('imageLink');
+  const mediaLinkInput = document.getElementById('mediaLink');
   const titleInput = document.getElementById('title');
   const tagsInput = document.getElementById('tagsInput');
   const creatorsInput = document.getElementById('creatorsInput');
@@ -8,8 +8,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tagSuggestionsDiv = document.getElementById('tagSuggestions');
   const creatorSuggestionsDiv = document.getElementById('creatorSuggestions');
   const saveButton = document.getElementById('save');
-  const statusDiv = document.getElementById('status');
   const externalLinkInput = document.getElementById('externalLink');
+  const mediaPreview = document.getElementById('mediaPreview');
 
   // Pre-fill with correct values
   const defaultSupabaseUrl = 'https://mugprkvnyvlzsxekwusx.supabase.co';
@@ -20,11 +20,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!config.supabaseUrl) await chrome.storage.sync.set({ supabaseUrl: defaultSupabaseUrl });
   if (!config.supabaseKey) await chrome.storage.sync.set({ supabaseKey: defaultSupabaseKey });
 
-  // Get image link from storage (set by background.js)
-  const { imageLink } = await chrome.storage.local.get(['imageLink']);
-  if (imageLink) {
-    imageLinkInput.value = imageLink;
+  // Get media link from storage (set by background.js)
+  const { mediaLink, mediaType } = await chrome.storage.local.get(['mediaLink', 'mediaType']);
+  if (mediaLink) {
+    // Clean video link by removing anything after the extension
+    const cleanLink = mediaType === 'video' 
+      ? mediaLink.split('.mp4')[0] + '.mp4'
+      : mediaLink;
+    
+    mediaLinkInput.value = cleanLink;
     titleInput.value = 'Untitled';
+    
+    // Create preview based on media type
+    if (mediaType === 'video') {
+      const video = document.createElement('video');
+      video.src = cleanLink;
+      video.controls = true;
+      video.autoplay = false;
+      mediaPreview.appendChild(video);
+    } else {
+      const img = document.createElement('img');
+      img.src = cleanLink;
+      mediaPreview.appendChild(img);
+    }
   }
 
   // Fetch tags and creators from Supabase
@@ -197,17 +215,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   saveButton.addEventListener('click', async () => {
     const titleRaw = titleInput.value.trim();
-    const title = titleRaw || (imageLinkInput.value.split('/').pop() || 'Untitled');
-    const image = imageLinkInput.value;
-    if (!image) {
-      showStatus('No image link found.', 'error');
+    const title = titleRaw || (mediaLinkInput.value.split('/').pop() || 'Untitled');
+    const mediaUrl = mediaLinkInput.value;
+    if (!mediaUrl) {
       updateButtonState('error');
       return;
     }
     // Get Supabase config
     const { supabaseUrl, supabaseKey } = await chrome.storage.sync.get(['supabaseUrl', 'supabaseKey']);
     if (!supabaseUrl || !supabaseKey) {
-      showStatus('Supabase config missing. Please set it in extension options.', 'error');
       updateButtonState('error');
       return;
     }
@@ -219,44 +235,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newCreators = selectedCreators.filter(c => !allCreators.includes(c));
     const link = externalLinkInput.value.trim();
     try {
+      // Insert new tags if needed
       if (newTags.length > 0) {
         await fetch(`${supabaseUrl}/rest/v1/tags`, {
           method: 'POST',
           headers: {
             'apikey': supabaseKey,
             'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(newTags.map(name => ({ name })))
         });
       }
+
+      // Insert new creators if needed
       if (newCreators.length > 0) {
         await fetch(`${supabaseUrl}/rest/v1/creators`, {
           method: 'POST',
           headers: {
             'apikey': supabaseKey,
             'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(newCreators.map(name => ({ name })))
         });
       }
-      // Fetch all creators to get their IDs
-      const creatorRes = await fetch(`${supabaseUrl}/rest/v1/creators?select=id,name`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      const allCreatorsData = creatorRes.ok ? await creatorRes.json() : [];
-      const creatorIds = selectedCreators.map(name => {
-        const found = allCreatorsData.find(c => c.name === name);
-        return found ? found.id : null;
-      }).filter(Boolean);
-      // Send to Supabase (legacy creator_name for compatibility)
-      const res = await fetch(`${supabaseUrl}/rest/v1/atoms`, {
+
+      // Insert the source with tags array and creator_name
+      const sourceRes = await fetch(`${supabaseUrl}/rest/v1/atoms`, {
         method: 'POST',
         headers: {
           'apikey': supabaseKey,
@@ -266,59 +272,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         body: JSON.stringify({
           title,
-          media_source_link: image,
-          content_type: 'image',
+          media_source_link: mediaUrl,
+          content_type: mediaType || 'image',
+          link,
           tags: selectedTags,
-          creator_name: selectedCreators.join(', '),
-          link
+          creator_name: selectedCreators[0] || null
         })
       });
-      if (res.ok) {
-        const atomData = await res.json();
-        const atomId = atomData && atomData[0] && atomData[0].id;
-        // Link all creators to the atom in atom_creators
-        if (atomId && creatorIds.length > 0) {
-          for (const creator_id of creatorIds) {
-            await fetch(`${supabaseUrl}/rest/v1/atom_creators`, {
-              method: 'POST',
-              headers: {
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
-              body: JSON.stringify([{ atom_id: atomId, creator_id }])
-            });
-          }
-        }
-        showStatus('Saved to database!', 'success');
-        updateButtonState('success');
-        selectedTags = [];
-        selectedCreators = [];
-        renderChips(tagChips, selectedTags, removeTag);
-        renderChips(creatorChips, selectedCreators, removeCreator);
-        titleInput.value = '';
-      } else {
-        const err = await res.text();
-        showStatus('Error: ' + err, 'error');
-        updateButtonState('error');
+
+      if (!sourceRes.ok) {
+        const errorData = await sourceRes.json().catch(() => null);
+        throw new Error(errorData?.message || `Server returned ${sourceRes.status}`);
       }
-    } catch (e) {
-      showStatus('Error: ' + e.message, 'error');
+
+      updateButtonState('success');
+      
+      // Clear form after successful save
+      setTimeout(() => {
+        window.close();
+      }, 2000);
+    } catch (error) {
+      console.error('Error saving source:', error);
       updateButtonState('error');
     }
   });
-
-  function showStatus(message, type) {
-    if (type === 'success') {
-      statusDiv.style.display = 'none';
-      return;
-    }
-    statusDiv.textContent = message;
-    statusDiv.className = `status ${type}`;
-    statusDiv.style.display = 'block';
-    setTimeout(() => {
-      statusDiv.style.display = 'none';
-    }, 3000);
-  }
 }); 

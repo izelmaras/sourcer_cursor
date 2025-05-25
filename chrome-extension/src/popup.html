@@ -101,27 +101,30 @@
       background: #eee;
       color: #111;
     }
-    .status {
-      margin-top: 12px;
-      padding: 8px;
-      border-radius: 4px;
-      font-size: 0.95rem;
-    }
-    .success {
-      background: #d4edda;
-      color: #155724;
-    }
-    .error {
-      background: #f8d7da;
-      color: #721c24;
-    }
     .relative { position: relative; }
+    .media-preview {
+      max-width: 100%;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .media-preview video {
+      width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+    }
+    .media-preview img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+    }
   </style>
 </head>
 <body>
   <h2>Add a source</h2>
+  <div id="mediaPreview" class="media-preview"></div>
   <div class="form-group">
-    <input type="text" id="imageLink" readonly>
+    <input type="text" id="mediaLink" readonly>
   </div>
   <div class="form-group">
     <input type="text" id="externalLink" placeholder="Website Link">
@@ -140,7 +143,6 @@
     <div class="suggestions" id="creatorSuggestions" style="display:none;"></div>
   </div>
   <button id="save">Add</button>
-  <div id="status" class="status" style="display: none;"></div>
   <script src="popup.js"></script>
 </body>
 </html> 
