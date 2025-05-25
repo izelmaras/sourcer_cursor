@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const mediaLinkInput = document.getElementById('mediaLink');
+  const imageLinkInput = document.getElementById('imageLink');
   const titleInput = document.getElementById('title');
   const tagsInput = document.getElementById('tagsInput');
   const creatorsInput = document.getElementById('creatorsInput');
@@ -20,10 +20,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!config.supabaseUrl) await chrome.storage.sync.set({ supabaseUrl: defaultSupabaseUrl });
   if (!config.supabaseKey) await chrome.storage.sync.set({ supabaseKey: defaultSupabaseKey });
 
-  // Get media link and type from storage (set by background.js)
-  const { mediaLink, mediaType } = await chrome.storage.local.get(['mediaLink', 'mediaType']);
-  if (mediaLink) {
-    mediaLinkInput.value = mediaLink;
+  // Get image link from storage (set by background.js)
+  const { imageLink } = await chrome.storage.local.get(['imageLink']);
+  if (imageLink) {
+    imageLinkInput.value = imageLink;
     titleInput.value = 'Untitled';
   }
 
@@ -197,10 +197,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   saveButton.addEventListener('click', async () => {
     const titleRaw = titleInput.value.trim();
-    const title = titleRaw || (mediaLinkInput.value.split('/').pop() || 'Untitled');
-    const media = mediaLinkInput.value;
-    if (!media) {
-      showStatus('No media link found.', 'error');
+    const title = titleRaw || (imageLinkInput.value.split('/').pop() || 'Untitled');
+    const image = imageLinkInput.value;
+    if (!image) {
+      showStatus('No image link found.', 'error');
       updateButtonState('error');
       return;
     }
@@ -266,8 +266,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         body: JSON.stringify({
           title,
-          media_source_link: media,
-          content_type: mediaType || 'image',
+          media_source_link: image,
+          content_type: 'image',
           tags: selectedTags,
           creator_name: selectedCreators.join(', '),
           link
@@ -303,9 +303,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         showStatus('Error: ' + err, 'error');
         updateButtonState('error');
       }
-    } catch (error) {
-      console.error('Error saving:', error);
-      showStatus('Error saving source. Please try again.', 'error');
+    } catch (e) {
+      showStatus('Error: ' + e.message, 'error');
       updateButtonState('error');
     }
   });

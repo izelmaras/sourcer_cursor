@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sources",
   "version": "1.0",
-  "description": "Add images and videos to your sources",
+  "description": "Add images to your sources",
   "permissions": [
     "contextMenus",
     "storage",
