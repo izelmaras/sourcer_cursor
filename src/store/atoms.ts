@@ -26,6 +26,7 @@ interface AtomStore {
   categoryTags: CategoryTag[];
   creatorTags: CreatorTag[];
   selectedTags: string[];
+  selectedCreator: string | null;
   loading: boolean;
   deletingIds: number[];
   defaultCategoryId: number | null;
@@ -38,6 +39,7 @@ interface AtomStore {
   fetchCreatorTags: () => Promise<void>;
   fetchDefaultCategory: () => Promise<void>;
   setDefaultCategory: (categoryId: number | null) => Promise<void>;
+  setSelectedCreator: (creator: string | null) => void;
   addAtom: (atom: Omit<Database['public']['Tables']['atoms']['Insert'], 'id'>) => Promise<void>;
   updateAtom: (id: number, updates: Partial<Database['public']['Tables']['atoms']['Update']>) => Promise<void>;
   addTag: (tag: Omit<Database['public']['Tables']['tags']['Insert'], 'id'>) => Promise<void>;
@@ -72,6 +74,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   categoryTags: [],
   creatorTags: [],
   selectedTags: [],
+  selectedCreator: null,
   loading: false,
   deletingIds: [],
   defaultCategoryId: null,
@@ -246,6 +249,10 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
     }
   },
 
+  setSelectedCreator: (creator: string | null) => {
+    set({ selectedCreator: creator });
+  },
+
   addAtom: async (atom) => {
     try {
       // Normalize tags before adding
@@ -302,6 +309,30 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         ? { ...updates, tags: updates.tags.map(normalizeTagName) }
         : updates;
 
+      // --- MULTI-CREATOR LOGIC START ---
+      if (updates.creator_name) {
+        // Parse creators from comma-separated string
+        const creatorNames = updates.creator_name.split(',').map(s => s.trim()).filter(Boolean);
+        const { data: allCreators } = await supabase.from('creators').select('*');
+        // Ensure all creators exist, add if missing
+        const creatorIds = [];
+        for (const name of creatorNames) {
+          let creator = allCreators?.find((c: any) => c.name === name);
+          if (!creator) {
+            const { data: newCreator } = await supabase.from('creators').insert([{ name, count: 1 }]).select().single();
+            creator = newCreator;
+          }
+          if (creator) creatorIds.push(creator.id);
+        }
+        // Remove old links
+        await supabase.from('atom_creators').delete().eq('atom_id', id);
+        // Add new links
+        for (const creator_id of creatorIds) {
+          await supabase.from('atom_creators').insert([{ atom_id: id, creator_id }]);
+        }
+      }
+      // --- MULTI-CREATOR LOGIC END ---
+
       const { error } = await supabase
         .from('atoms')
         .update(normalizedUpdates)
@@ -312,7 +343,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         throw error;
       }
 
-      const atoms = get().atoms.map(atom =>
+      const atoms = get().atoms.map((atom: Atom) =>
         atom.id === id ? { ...atom, ...normalizedUpdates } : atom
       );
       set({ atoms });

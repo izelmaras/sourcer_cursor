@@ -28,11 +28,14 @@ export const Home = (): JSX.Element => {
     atoms,
     defaultCategoryId,
     categories,
-    getCategoryTags
+    getCategoryTags,
+    isTagDrawerCollapsed,
+    setTagDrawerCollapsed,
+    selectedCreator,
+    setSelectedCreator
   } = useAtomStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedContentTypes, setSelectedContentTypes] = useState<string[]>([]);
-  const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isOrganizeOpen, setIsOrganizeOpen] = useState(false);
 
@@ -50,6 +53,12 @@ export const Home = (): JSX.Element => {
     
     initializeData();
   }, []);
+
+  useEffect(() => {
+    if ((selectedTags.length > 0 || selectedCreator) && isTagDrawerCollapsed) {
+      setTagDrawerCollapsed(false);
+    }
+  }, [selectedTags, selectedCreator, isTagDrawerCollapsed, setTagDrawerCollapsed]);
 
   const hasFilters = selectedTags.length > 0 || selectedContentTypes.length > 0 || searchTerm || defaultCategoryId !== null || selectedCreator !== null;
 

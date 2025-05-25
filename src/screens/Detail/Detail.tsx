@@ -18,6 +18,7 @@ import { ModalWrapper } from "../../components/ui/modal-wrapper";
 import { HtmlContent } from "../../components/ui/html-content";
 import { VideoPlayer } from "../../components/ui/video-player";
 import { Switch } from "../../components/ui/switch";
+import { supabase } from '../../lib/supabase';
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -57,10 +58,14 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(currentAtom?.title || '');
   const [editDescription, setEditDescription] = useState(currentAtom?.description || '');
-  const [editCreator, setEditCreator] = useState(currentAtom?.creator_name || '');
+  const [editCreators, setEditCreators] = useState<string[]>(currentAtom?.creator_name ? currentAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
   const [editTags, setEditTags] = useState<string[]>(currentAtom?.tags || []);
   const [tagSearch, setTagSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const [atomCreators, setAtomCreators] = useState<{ id: number, name: string }[]>([]);
+
+  const [newCreator, setNewCreator] = useState('');
 
   const isVideoUrl = (url: string) => {
     return /\.(mp4|mov|webm|ogg)$/i.test(url);
@@ -75,7 +80,7 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
     if (currentAtom) {
       setEditTitle(currentAtom.title);
       setEditDescription(currentAtom.description || '');
-      setEditCreator(currentAtom.creator_name || '');
+      setEditCreators(currentAtom.creator_name ? currentAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
       setEditTags(currentAtom.tags || []);
       setIsFlagged(currentAtom.flag_for_deletion || false);
     }
@@ -87,6 +92,22 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
       setPosition({ x: 0, y: 0 });
     }
   }, [isZoomed]);
+
+  useEffect(() => {
+    async function fetchAtomCreators() {
+      if (!currentAtom?.id) return;
+      const { data, error } = await supabase
+        .from('atom_creators')
+        .select('creator_id, creators(name, id)')
+        .eq('atom_id', currentAtom.id);
+      if (data) {
+        setAtomCreators(data.map((row: any) => ({ id: row.creators.id, name: row.creators.name })));
+      } else {
+        setAtomCreators([]);
+      }
+    }
+    fetchAtomCreators();
+  }, [currentAtom?.id]);
 
   const handleClose = () => {
     navigate('/', { replace: true });
@@ -199,33 +220,25 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
 
   const handleSaveEdits = async () => {
     if (!editTitle || !currentAtom) return;
-
     try {
       setIsSaving(true);
-
-      if (editCreator && !creators.find(c => c.name === editCreator)) {
-        await addCreator({
-          name: editCreator,
-          count: 1,
-        });
-      }
-
-      for (const tag of editTags) {
-        if (!tags.find(t => t.name === tag)) {
-          await addTag({
-            name: tag,
-            count: 1,
-          });
+      // Ensure each creator exists individually
+      for (const creatorName of editCreators) {
+        if (!creators.find(c => c.name === creatorName)) {
+          await addCreator({ name: creatorName, count: 1 });
         }
       }
-
+      for (const tag of editTags) {
+        if (!tags.find(t => t.name === tag)) {
+          await addTag({ name: tag, count: 1 });
+        }
+      }
       await updateAtom(currentAtom.id, {
         title: editTitle,
         description: editDescription || null,
-        creator_name: editCreator || null,
+        creator_name: editCreators.join(', '), // legacy, join table is updated in store
         tags: editTags,
       });
-
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving edits:', error);
@@ -270,6 +283,12 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
       setIsFlagged(!isFlagged);
       console.error('Error toggling flag:', error);
     }
+  };
+
+  const handleCreatorSelect = (creatorName: string) => {
+    useAtomStore.getState().setSelectedCreator(creatorName);
+    useAtomStore.getState().setTagDrawerCollapsed(false);
+    handleClose();
   };
 
   if (!currentAtom) return null;
@@ -337,15 +356,15 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
                   <div className="relative aspect-video bg-gray-50 flex items-center justify-center">
                     {isVideo ? (
                       <VideoPlayer
-                        src={currentAtom.media_source_link}
+                        src={currentAtom.media_source_link || ''}
                         className="max-h-[60vh] w-auto"
                         controls={true}
                         autoPlay={false}
                       />
                     ) : (
                       <img
-                        src={currentAtom.media_source_link}
-                        alt={currentAtom.title}
+                        src={currentAtom.media_source_link || ''}
+                        alt={currentAtom.title || ''}
                         className={`max-h-[60vh] w-auto object-contain transition-opacity duration-300 ${
                           imageLoaded ? 'opacity-100' : 'opacity-0'
                         }`}
@@ -365,7 +384,40 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
                         />
                       )}
                       <TagList tags={currentAtom.tags || []} onTagClick={handleTagSelect} />
-                      <CreatorInfo name={currentAtom.creator_name || ''} />
+                      {atomCreators.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {atomCreators.map((creator) => (
+                            <Button
+                              key={creator.id}
+                              variant="secondary"
+                              size="sm"
+                              className="rounded-full bg-gray-900 text-white hover:bg-gray-800 px-4 py-1 text-sm font-medium shadow"
+                              onClick={() => handleCreatorSelect(creator.name)}
+                            >
+                              {creator.name}
+                            </Button>
+                          ))}
+                        </div>
+                      ) : (
+                        currentAtom.creator_name && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {currentAtom.creator_name.split(',').map((name, idx) => {
+                              const trimmed = name.trim();
+                              return trimmed ? (
+                                <Button
+                                  key={trimmed + idx}
+                                  variant="secondary"
+                                  size="sm"
+                                  className="rounded-full bg-gray-900 text-white hover:bg-gray-800 px-4 py-1 text-sm font-medium shadow"
+                                  onClick={() => handleCreatorSelect(trimmed)}
+                                >
+                                  {trimmed}
+                                </Button>
+                              ) : null;
+                            })}
+                          </div>
+                        )
+                      )}
                     </>
                   ) : (
                     <div className="space-y-4">
@@ -382,10 +434,19 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
                         className={colors.button.secondary}
                       />
                       <Input
-                        value={editCreator}
-                        onChange={(e) => setEditCreator(e.target.value)}
-                        placeholder="Creator"
+                        value={newCreator}
+                        onChange={(e) => setNewCreator(e.target.value)}
+                        placeholder="Add creator"
                         className={colors.button.secondary}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newCreator.trim()) {
+                            if (!editCreators.includes(newCreator.trim())) {
+                              setEditCreators([...editCreators, newCreator.trim()]);
+                            }
+                            setNewCreator('');
+                            e.preventDefault();
+                          }
+                        }}
                         list="creators"
                       />
                       <datalist id="creators">
@@ -393,6 +454,23 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
                           <option key={creator.id} value={creator.name} />
                         ))}
                       </datalist>
+                      {editCreators.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {editCreators.map((name, idx) => (
+                            <Button
+                              key={name + idx}
+                              variant="secondary"
+                              size="sm"
+                              className="rounded-full bg-gray-900 text-white hover:bg-gray-800 px-4 py-1 text-sm font-medium shadow"
+                              onClick={() => setEditCreators(editCreators.filter((n) => n !== name))}
+                              tabIndex={-1}
+                            >
+                              {name}
+                              <XIcon className="h-4 w-4 ml-2" />
+                            </Button>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="space-y-4">
                         <Input
@@ -531,8 +609,8 @@ export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX
           >
             <img
               ref={imageRef}
-              src={currentAtom.media_source_link}
-              alt={currentAtom.title}
+              src={currentAtom.media_source_link || ''}
+              alt={currentAtom.title || ''}
               className="max-h-screen max-w-full object-contain transition-transform duration-200"
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,

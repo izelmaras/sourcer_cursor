@@ -189,7 +189,13 @@ export const FrameByAnima = ({ searchTerm, selectedContentTypes, selectedCreator
     
     const matchesType = selectedContentTypes.length === 0 || selectedContentTypes.includes(atom.content_type);
     
-    const matchesCreator = !selectedCreator || atom.creator_name === selectedCreator;
+    const matchesCreator =
+      !selectedCreator ||
+      (atom.creator_name &&
+        atom.creator_name
+          .split(',')
+          .map(name => name.trim())
+          .includes(selectedCreator));
 
     const atomTags = atom.tags || [];
     const isInPrivateCategory = categories.some(category => 

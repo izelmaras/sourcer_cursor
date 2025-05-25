@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const creatorSuggestionsDiv = document.getElementById('creatorSuggestions');
   const saveButton = document.getElementById('save');
   const statusDiv = document.getElementById('status');
+  const externalLinkInput = document.getElementById('externalLink');
 
   // Pre-fill with correct values
   const defaultSupabaseUrl = 'https://mugprkvnyvlzsxekwusx.supabase.co';
@@ -154,23 +155,69 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderChips(tagChips, selectedTags, removeTag);
   renderChips(creatorChips, selectedCreators, removeCreator);
 
+  // Function to update button state
+  function updateButtonState(state) {
+    switch(state) {
+      case 'loading':
+        saveButton.textContent = 'Saving...';
+        saveButton.disabled = true;
+        saveButton.style.background = '#666';
+        break;
+      case 'success':
+        saveButton.textContent = 'Saved!';
+        saveButton.style.background = '#4CAF50';
+        setTimeout(() => {
+          saveButton.textContent = 'Add';
+          saveButton.disabled = false;
+          saveButton.style.background = '#fff';
+        }, 2000);
+        break;
+      case 'error':
+        saveButton.textContent = 'Failed';
+        saveButton.style.background = '#f44336';
+        setTimeout(() => {
+          saveButton.textContent = 'Add';
+          saveButton.disabled = false;
+          saveButton.style.background = '#fff';
+        }, 2000);
+        break;
+      default:
+        saveButton.textContent = 'Add';
+        saveButton.disabled = false;
+        saveButton.style.background = '#fff';
+    }
+  }
+
+  // Get website URL (current tab)
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    if (tabs && tabs[0] && tabs[0].url) {
+      externalLinkInput.value = tabs[0].url;
+    }
+  });
+
   saveButton.addEventListener('click', async () => {
     const titleRaw = titleInput.value.trim();
     const title = titleRaw || (imageLinkInput.value.split('/').pop() || 'Untitled');
     const image = imageLinkInput.value;
     if (!image) {
       showStatus('No image link found.', 'error');
+      updateButtonState('error');
       return;
     }
     // Get Supabase config
     const { supabaseUrl, supabaseKey } = await chrome.storage.sync.get(['supabaseUrl', 'supabaseKey']);
     if (!supabaseUrl || !supabaseKey) {
       showStatus('Supabase config missing. Please set it in extension options.', 'error');
+      updateButtonState('error');
       return;
     }
+
+    updateButtonState('loading');
+
     // Insert new tags/creators if needed
     const newTags = selectedTags.filter(t => !allTags.includes(t));
     const newCreators = selectedCreators.filter(c => !allCreators.includes(c));
+    const link = externalLinkInput.value.trim();
     try {
       if (newTags.length > 0) {
         await fetch(`${supabaseUrl}/rest/v1/tags`, {
@@ -196,7 +243,19 @@ document.addEventListener('DOMContentLoaded', async () => {
           body: JSON.stringify(newCreators.map(name => ({ name })))
         });
       }
-      // Send to Supabase
+      // Fetch all creators to get their IDs
+      const creatorRes = await fetch(`${supabaseUrl}/rest/v1/creators?select=id,name`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      const allCreatorsData = creatorRes.ok ? await creatorRes.json() : [];
+      const creatorIds = selectedCreators.map(name => {
+        const found = allCreatorsData.find(c => c.name === name);
+        return found ? found.id : null;
+      }).filter(Boolean);
+      // Send to Supabase (legacy creator_name for compatibility)
       const res = await fetch(`${supabaseUrl}/rest/v1/atoms`, {
         method: 'POST',
         headers: {
@@ -210,11 +269,30 @@ document.addEventListener('DOMContentLoaded', async () => {
           media_source_link: image,
           content_type: 'image',
           tags: selectedTags,
-          creator_name: selectedCreators[0] || null // Only first creator for now
+          creator_name: selectedCreators.join(', '),
+          link
         })
       });
       if (res.ok) {
+        const atomData = await res.json();
+        const atomId = atomData && atomData[0] && atomData[0].id;
+        // Link all creators to the atom in atom_creators
+        if (atomId && creatorIds.length > 0) {
+          for (const creator_id of creatorIds) {
+            await fetch(`${supabaseUrl}/rest/v1/atom_creators`, {
+              method: 'POST',
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify([{ atom_id: atomId, creator_id }])
+            });
+          }
+        }
         showStatus('Saved to database!', 'success');
+        updateButtonState('success');
         selectedTags = [];
         selectedCreators = [];
         renderChips(tagChips, selectedTags, removeTag);
@@ -223,13 +301,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         const err = await res.text();
         showStatus('Error: ' + err, 'error');
+        updateButtonState('error');
       }
     } catch (e) {
       showStatus('Error: ' + e.message, 'error');
+      updateButtonState('error');
     }
   });
 
   function showStatus(message, type) {
+    if (type === 'success') {
+      statusDiv.style.display = 'none';
+      return;
+    }
     statusDiv.textContent = message;
     statusDiv.className = `status ${type}`;
     statusDiv.style.display = 'block';
