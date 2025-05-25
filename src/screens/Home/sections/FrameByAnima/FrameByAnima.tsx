@@ -25,6 +25,36 @@ const Gallery = memo(({ atoms, onSelect }: {
   const navigate = useNavigate();
   const { deletingIds } = useAtomStore();
   
+  // Function to reorder items for right-to-left flow while maintaining masonry layout
+  const reorderForRightToLeft = (items: Atom[]) => {
+    const columns = window.innerWidth >= 1024 ? 4 : 
+                   window.innerWidth >= 768 ? 3 : 
+                   window.innerWidth >= 640 ? 2 : 1;
+    
+    const result: Atom[] = [];
+    const rows = Math.ceil(items.length / columns);
+    
+    // Create a 2D array to hold items by column
+    const columnItems: Atom[][] = Array.from({ length: columns }, () => []);
+    
+    // Distribute items into columns
+    items.forEach((item, index) => {
+      const columnIndex = index % columns;
+      columnItems[columnIndex].push(item);
+    });
+    
+    // Flatten columns into a single array
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < columns; j++) {
+        if (columnItems[j][i]) {
+          result.push(columnItems[j][i]);
+        }
+      }
+    }
+    
+    return result;
+  };
+  
   const handleAtomClick = (atom: Atom) => {
     navigate(`/detail/${atom.id}`, { replace: true });
     onSelect(atom);
@@ -43,7 +73,7 @@ const Gallery = memo(({ atoms, onSelect }: {
 
   return (
     <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-3 w-full">
-      {atoms.map((atom) => {
+      {reorderForRightToLeft(atoms).map((atom) => {
         const isImageType = atom.content_type === 'image';
         const isVideoType = atom.content_type === 'video' || atom.content_type === 'youtube';
         const hasMedia = (isImageType || isVideoType) && (atom.media_source_link || atom.link);
