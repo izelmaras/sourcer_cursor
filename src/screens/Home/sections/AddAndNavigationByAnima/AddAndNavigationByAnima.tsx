@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronRightIcon, Flag } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, Flag, ImageOff } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/button";
 import { colors } from "../../../../lib/design-tokens";
@@ -82,6 +82,7 @@ export const AddAndNavigationByAnima = ({
   );
 
   const flaggedCount = atoms.filter(atom => atom.flag_for_deletion).length;
+  const taglessCount = atoms.filter(atom => !atom.tags || atom.tags.length === 0).length;
 
   const handleFlaggedToggle = () => {
     toggleTag('flagged');
@@ -251,6 +252,21 @@ export const AddAndNavigationByAnima = ({
                           <Flag className="w-4 h-4 mr-2" />
                           <span>Flagged</span>
                           <span className="ml-2 text-xs opacity-60">({flaggedCount})</span>
+                        </Button>
+                        {/* Tagless Items Button */}
+                        <Button
+                          variant={selectedTags.includes('no-tag') ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => toggleTag('no-tag')}
+                          className={`h-8 px-4 ${
+                            selectedTags.includes('no-tag')
+                              ? colors.tag.selected
+                              : colors.tag.unselected
+                          }`}
+                        >
+                          <ImageOff className="w-4 h-4 mr-2" />
+                          <span>No Tag</span>
+                          <span className="ml-2 text-xs opacity-60">({taglessCount})</span>
                         </Button>
                       </div>
                     )}

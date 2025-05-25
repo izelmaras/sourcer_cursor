@@ -186,9 +186,7 @@ export const FrameByAnima = ({ searchTerm, selectedContentTypes, selectedCreator
     const matchesSearch = searchTerm.toLowerCase() === '' || 
       atom.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       atom.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesType = selectedContentTypes.length === 0 || selectedContentTypes.includes(atom.content_type);
-    
     const matchesCreator =
       !selectedCreator ||
       (atom.creator_name &&
@@ -196,27 +194,24 @@ export const FrameByAnima = ({ searchTerm, selectedContentTypes, selectedCreator
           .split(',')
           .map(name => name.trim())
           .includes(selectedCreator));
-
     const atomTags = atom.tags || [];
     const isInPrivateCategory = categories.some(category => 
       category.is_private && 
       getCategoryTags(category.id).some(tag => atomTags.includes(tag.name))
     );
-
     const selectedTagsInPrivateCategories = selectedTags.some(tagName =>
       categories.some(category =>
         category.is_private &&
         getCategoryTags(category.id).some(tag => tag.name === tagName)
       )
     );
-
     const defaultCategoryTags = defaultCategoryId ? getCategoryTags(defaultCategoryId).map(t => t.name) : [];
     const matchesDefaultCategory = !defaultCategoryId || 
       selectedTags.length > 0 || 
       atomTags.some(tag => defaultCategoryTags.includes(tag));
-
     const matchesFlagged = selectedTags.includes('flagged') ? atom.flag_for_deletion : true;
-
+    // Tagless filter logic
+    const matchesNoTag = selectedTags.includes('no-tag') ? (!atom.tags || atom.tags.length === 0) : true;
     return matchesSearch && 
            matchesType && 
            matchesCreator &&
@@ -224,7 +219,8 @@ export const FrameByAnima = ({ searchTerm, selectedContentTypes, selectedCreator
            !selectedTagsInPrivateCategories &&
            matchesDefaultCategory &&
            matchesFlagged &&
-           (selectedTags.length === 0 || selectedTags.every(tag => tag === 'flagged' || atomTags.includes(tag)));
+           matchesNoTag &&
+           (selectedTags.length === 0 || selectedTags.every(tag => tag === 'flagged' || tag === 'no-tag' || atomTags.includes(tag)));
   });
 
   return (
