@@ -1,5 +1,5 @@
 import { LinkIcon } from "lucide-react";
-import React, { useState, memo } from "react";
+import React, { useState, memo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ContentBadge } from "../../../../components/ui/content-badge";
 import { Card, CardContent } from "../../../../components/ui/card";
@@ -24,6 +24,17 @@ const Gallery = memo(({ atoms, onSelect }: {
 }) => {
   const navigate = useNavigate();
   const { deletingIds } = useAtomStore();
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        setVisibleCount((prev) => prev + 20);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   
   // Function to reorder items for right-to-left flow while maintaining masonry layout
   const reorderForRightToLeft = (items: Atom[]) => {
@@ -73,7 +84,7 @@ const Gallery = memo(({ atoms, onSelect }: {
 
   return (
     <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-3 w-full">
-      {reorderForRightToLeft(atoms).map((atom) => {
+      {reorderForRightToLeft(atoms).slice(0, visibleCount).map((atom) => {
         const isImageType = atom.content_type === 'image';
         const isVideoType = atom.content_type === 'video' || atom.content_type === 'youtube';
         const hasMedia = (isImageType || isVideoType) && (atom.media_source_link || atom.link);
