@@ -121,7 +121,7 @@ const Gallery = memo(({ atoms, onSelect }: {
 
 Gallery.displayName = 'Gallery';
 
-export const FrameByAnima = ({ searchTerm, selectedContentTypes, selectedCreator }: FrameByAnimaProps): JSX.Element => {
+export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreator }: FrameByAnimaProps): JSX.Element => {
   const { atoms, selectedTags, categories, getCategoryTags, defaultCategoryId } = useAtomStore();
   const [selectedAtom, setSelectedAtom] = useState<Atom | null>(null);
 

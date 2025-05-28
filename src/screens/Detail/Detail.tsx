@@ -35,7 +35,7 @@ const ZOOM_SETTINGS = {
   SCALE_STEP: 0.2,
 };
 
-export const Detail = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX.Element => {
+export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps): JSX.Element => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { atoms: allAtoms, deleteAtom, updateAtom, addTag, addCreator, fetchTags, fetchCreators, tags, creators, toggleTag } = useAtomStore();

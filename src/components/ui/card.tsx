@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "../../lib/utils";
 
-const Card = React.forwardRef<
+const GalleryTile = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
@@ -15,9 +15,9 @@ const Card = React.forwardRef<
     {...props}
   />
 ));
-Card.displayName = "Card";
+GalleryTile.displayName = "GalleryTile";
 
-const CardHeader = React.forwardRef<
+const GalleryTileHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
@@ -27,9 +27,9 @@ const CardHeader = React.forwardRef<
     {...props}
   />
 ));
-CardHeader.displayName = "CardHeader";
+GalleryTileHeader.displayName = "GalleryTileHeader";
 
-const CardTitle = React.forwardRef<
+const GalleryTileTitle = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
@@ -39,9 +39,9 @@ const CardTitle = React.forwardRef<
     {...props}
   />
 ));
-CardTitle.displayName = "CardTitle";
+GalleryTileTitle.displayName = "GalleryTileTitle";
 
-const CardDescription = React.forwardRef<
+const GalleryTileDescription = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
@@ -51,17 +51,17 @@ const CardDescription = React.forwardRef<
     {...props}
   />
 ));
-CardDescription.displayName = "CardDescription";
+GalleryTileDescription.displayName = "GalleryTileDescription";
 
-const CardContent = React.forwardRef<
+const GalleryTileContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
 ));
-CardContent.displayName = "CardContent";
+GalleryTileContent.displayName = "GalleryTileContent";
 
-const CardFooter = React.forwardRef<
+const GalleryTileFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
@@ -71,13 +71,13 @@ const CardFooter = React.forwardRef<
     {...props}
   />
 ));
-CardFooter.displayName = "CardFooter";
+GalleryTileFooter.displayName = "GalleryTileFooter";
 
 export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
-  CardContent,
+  GalleryTile,
+  GalleryTileHeader,
+  GalleryTileFooter,
+  GalleryTileTitle,
+  GalleryTileDescription,
+  GalleryTileContent,
 };

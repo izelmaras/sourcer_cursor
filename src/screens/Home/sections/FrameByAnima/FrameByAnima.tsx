@@ -2,7 +2,7 @@ import { LinkIcon } from "lucide-react";
 import React, { useState, memo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ContentBadge } from "../../../../components/ui/content-badge";
-import { Card, CardContent } from "../../../../components/ui/card";
+import { GalleryTile, GalleryTileContent } from "../../../../components/ui/card";
 import { useAtomStore } from "../../../../store/atoms";
 import { Database } from "../../../../types/supabase";
 import { LazyImage } from "../../../../components/ui/lazy-image";
@@ -12,7 +12,7 @@ import { getYouTubeVideoId } from "../../../../lib/utils";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
-interface FrameByAnimaProps {
+interface GallerySectionProps {
   searchTerm: string;
   selectedContentTypes: string[];
   selectedCreator: string | null;
@@ -94,7 +94,7 @@ const Gallery = memo(({ atoms, onSelect }: {
         
         if (isImageType || isVideoType) {
           return (
-            <Card
+            <GalleryTile
               key={atom.id}
               className={`relative break-inside-avoid mb-3 p-0 overflow-hidden cursor-pointer group bg-gray-100 select-none focus:outline-none transition-opacity duration-200 ${
                 isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
@@ -122,12 +122,12 @@ const Gallery = memo(({ atoms, onSelect }: {
                 </div>
               )}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-            </Card>
+            </GalleryTile>
           );
         }
 
         return (
-          <Card
+          <GalleryTile
             key={atom.id}
             className={`relative break-inside-avoid mb-3 p-0 overflow-hidden cursor-pointer group bg-black select-none focus:outline-none transition-opacity duration-200 ${
               isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
@@ -135,7 +135,7 @@ const Gallery = memo(({ atoms, onSelect }: {
             onClick={() => handleAtomClick(atom)}
           >
             <div className="absolute inset-0 bg-black/80 group-hover:bg-black/90 transition-colors" />
-            <CardContent className="relative p-4 sm:p-6 flex flex-col text-white min-h-[120px]">
+            <GalleryTileContent className="relative p-4 sm:p-6 flex flex-col text-white min-h-[120px]">
               <div className="flex items-start mb-3">
                 <ContentBadge type={atom.content_type} />
               </div>
@@ -157,12 +157,12 @@ const Gallery = memo(({ atoms, onSelect }: {
                   </div>
                 )}
 
-                {atom.tags && atom.tags.length > 0 && (
+                {atom.tags && atom.tags.filter(tag => tag.toLowerCase() !== 'link').length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {atom.tags.map((tag, index) => (
+                    {atom.tags.filter(tag => tag.toLowerCase() !== 'link').map((tag, index, arr) => (
                       <span key={index} className="text-xs text-gray-300">
                         {capitalizeTag(tag)}
-                        {index < atom.tags!.length - 1 && ","}
+                        {index < arr.length - 1 && ","}
                       </span>
                     ))}
                   </div>
@@ -178,9 +178,21 @@ const Gallery = memo(({ atoms, onSelect }: {
                     </span>
                   </div>
                 )}
+
+                {atom.content_type === 'link' && atom.link && (
+                  <a
+                    href={atom.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-3 right-3 bg-white rounded-full p-2 shadow hover:bg-gray-100 transition z-10"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <LinkIcon className="w-5 h-5 text-gray-700" />
+                  </a>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </GalleryTileContent>
+          </GalleryTile>
         );
       })}
     </div>
@@ -189,7 +201,7 @@ const Gallery = memo(({ atoms, onSelect }: {
 
 Gallery.displayName = 'Gallery';
 
-export const FrameByAnima = ({ searchTerm, selectedContentTypes, selectedCreator }: FrameByAnimaProps): JSX.Element => {
+export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreator }: GallerySectionProps): JSX.Element => {
   const { atoms, selectedTags, categories, getCategoryTags, defaultCategoryId } = useAtomStore();
   const [selectedAtom, setSelectedAtom] = useState<Atom | null>(null);
 

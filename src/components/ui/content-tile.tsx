@@ -1,11 +1,11 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
-interface ContentTileProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface GalleryTileButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-export const ContentTile = React.forwardRef<HTMLButtonElement, ContentTileProps>(
+export const GalleryTileButton = React.forwardRef<HTMLButtonElement, GalleryTileButtonProps>(
   ({ className, children, ...props }, ref) => {
     return (
       <button
@@ -27,4 +27,4 @@ export const ContentTile = React.forwardRef<HTMLButtonElement, ContentTileProps>
   }
 );
 
-ContentTile.displayName = 'ContentTile';
+GalleryTileButton.displayName = 'GalleryTileButton';

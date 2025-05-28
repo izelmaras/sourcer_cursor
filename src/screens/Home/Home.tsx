@@ -1,8 +1,8 @@
 import React, { useEffect, useCallback, useState } from "react";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AddAndNavigationByAnima } from "./sections/AddAndNavigationByAnima";
-import { FrameByAnima } from "./sections/FrameByAnima/FrameByAnima";
-import { Detail } from "../Detail/Detail";
+import { GallerySection } from "./sections/FrameByAnima/FrameByAnima";
+import { DetailView } from "../Detail/Detail";
 import { Add } from "../Add/Add";
 import { Organize } from "../Organize/Organize";
 import { useAtomStore } from "../../store/atoms";
@@ -159,14 +159,14 @@ export const Home = (): JSX.Element => {
         <div className="space-y-6">
           <Routes>
             <Route path="/" element={
-              <FrameByAnima 
+              <GallerySection 
                 searchTerm={searchTerm}
                 selectedContentTypes={selectedContentTypes}
                 selectedCreator={selectedCreator}
               />
             } />
             <Route path="/detail/:id" element={
-              <Detail 
+              <DetailView 
                 open={true}
                 onClose={() => navigate('/', { replace: true })}
                 filteredAtoms={atoms}
