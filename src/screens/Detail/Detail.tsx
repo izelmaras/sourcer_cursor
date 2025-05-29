@@ -19,6 +19,7 @@ import { HtmlContent } from "../../components/ui/html-content";
 import { VideoPlayer } from "../../components/ui/video-player";
 import { Switch } from "../../components/ui/switch";
 import { supabase } from '../../lib/supabase';
+import { LiveLinkPreview } from "../../components/ui/LiveLinkPreview";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -291,10 +292,10 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
     handleClose();
   };
 
-  if (!currentAtom) return null;
+  if (!currentAtom) return <span />;
 
   const hasMedia = currentAtom.media_source_link && (currentAtom.content_type === 'image' || currentAtom.content_type === 'video');
-  const isVideo = hasMedia && isVideoUrl(currentAtom.media_source_link);
+  const isVideo = hasMedia && isVideoUrl(currentAtom.media_source_link || '');
 
   const filteredTags = tags
     .filter(tag => 
@@ -382,6 +383,14 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                           html={currentAtom.description}
                           className="text-gray-600"
                         />
+                      )}
+                      {/* Add live link preview for link content */}
+                      {currentAtom.content_type === 'link' && (
+                        <div className="mb-6 flex justify-center">
+                          <LiveLinkPreview url={currentAtom.link ? currentAtom.link : ""} height={520}>
+                            <span style={{display:'none'}} />
+                          </LiveLinkPreview>
+                        </div>
                       )}
                       <TagList tags={currentAtom.tags || []} onTagClick={handleTagSelect} />
                       {atomCreators.length > 0 ? (

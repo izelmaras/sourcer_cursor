@@ -1,5 +1,5 @@
 import { LinkIcon } from "lucide-react";
-import React, { useState, memo, useEffect } from "react";
+import React, { useState, memo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ContentBadge } from "../../../../components/ui/content-badge";
 import { GalleryTile, GalleryTileContent } from "../../../../components/ui/card";
@@ -9,6 +9,7 @@ import { LazyImage } from "../../../../components/ui/lazy-image";
 import { HtmlContent } from "../../../../components/ui/html-content";
 import { VideoPlayer } from "../../../../components/ui/video-player";
 import { getYouTubeVideoId } from "../../../../lib/utils";
+import { LiveLinkPreview } from "../../../../components/ui/LiveLinkPreview";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -18,23 +19,67 @@ interface GallerySectionProps {
   selectedCreator: string | null;
 }
 
-const Gallery = memo(({ atoms, onSelect }: { 
+const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selectedCreator }: { 
   atoms: Atom[], 
-  onSelect: (atom: Atom) => void 
+  onSelect: (atom: Atom) => void,
+  searchTerm?: string,
+  selectedContentTypes?: string[],
+  selectedCreator?: string | null
 }) => {
   const navigate = useNavigate();
   const { deletingIds } = useAtomStore();
   const [visibleCount, setVisibleCount] = useState(12);
+  const lastFilterRef = useRef<string>("");
 
+  // Helper to create a filter signature
+  const getFilterSignature = () => {
+    return JSON.stringify({
+      searchTerm,
+      selectedContentTypes,
+      selectedCreator
+    });
+  };
+
+  // Only reset visibleCount when filters/search change
   useEffect(() => {
+    const filterSignature = getFilterSignature();
+    if (lastFilterRef.current !== filterSignature) {
+      setVisibleCount(12);
+      lastFilterRef.current = filterSignature;
+    }
+  }, [searchTerm, selectedContentTypes, selectedCreator]);
+
+  // Restore auto-fill logic on mount and when atoms change
+  useEffect(() => {
+    function isPageScrollable() {
+      return document.body.scrollHeight > window.innerHeight;
+    }
+    let nextCount = visibleCount;
+    // Only auto-fill if not all items are visible
+    while (!isPageScrollable() && nextCount < atoms.length) {
+      nextCount += 12;
+      setVisibleCount(nextCount);
+    }
+    // eslint-disable-next-line
+  }, [atoms]);
+
+  // Debounced scroll handler
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null;
     const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-        setVisibleCount((prev) => prev + 12);
-      }
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+          setVisibleCount((prev) => Math.min(prev + 12, atoms.length));
+        }
+      }, 100);
     };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [atoms.length]);
   
   // Function to reorder items for right-to-left flow while maintaining masonry layout
   const reorderForRightToLeft = (items: Atom[]) => {
@@ -135,14 +180,34 @@ const Gallery = memo(({ atoms, onSelect }: {
             onClick={() => handleAtomClick(atom)}
           >
             <div className="absolute inset-0 bg-black/80 group-hover:bg-black/90 transition-colors" />
-            <GalleryTileContent className="relative p-4 sm:p-6 flex flex-col text-white min-h-[120px]">
-              <div className="flex items-start mb-3">
-                <ContentBadge type={atom.content_type} />
+            <GalleryTileContent className={`relative px-4 pb-4 pt-2 sm:px-6 sm:pb-6 sm:pt-3 flex flex-col text-white min-h-[120px]`}>
+              <div className="flex items-start mb-2">
+                {atom.content_type !== 'link' && <ContentBadge type={atom.content_type} />}
               </div>
-
-              <div className="flex-1 flex flex-col gap-3">
+              {atom.content_type === 'link' && atom.link && (
+                <div className="mb-2 flex justify-center">
+                  <LiveLinkPreview url={atom.link || ""} height={240}>
+                    <div className="flex flex-col items-center justify-center w-full h-full">
+                      {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
+                        <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
+                      ) : (
+                        <img
+                          src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
+                          alt={atom.title}
+                          className="w-full h-40 object-cover rounded"
+                        />
+                      )}
+                      <h4 className="mt-2 text-white text-sm sm:text-base font-medium break-words line-clamp-2">{atom.title}</h4>
+                      {atom.description && (
+                        <p className="text-gray-300 text-xs sm:text-sm break-words line-clamp-2">{atom.description}</p>
+                      )}
+                    </div>
+                  </LiveLinkPreview>
+                </div>
+              )}
+              <div className="flex-1 flex flex-col gap-2">
                 {atom.title && atom.title !== ' ' && (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <h4 className="text-white text-sm sm:text-base font-medium break-words line-clamp-2">
                       {atom.title}
                     </h4>
@@ -156,9 +221,8 @@ const Gallery = memo(({ atoms, onSelect }: {
                     )}
                   </div>
                 )}
-
                 {atom.tags && atom.tags.filter(tag => tag.toLowerCase() !== 'link').length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="flex flex-wrap gap-2 mb-1">
                     {atom.tags.filter(tag => tag.toLowerCase() !== 'link').map((tag, index, arr) => (
                       <span key={index} className="text-xs text-gray-300">
                         {capitalizeTag(tag)}
@@ -167,7 +231,6 @@ const Gallery = memo(({ atoms, onSelect }: {
                     ))}
                   </div>
                 )}
-
                 {atom.creator_name && (
                   <div className="flex flex-wrap items-center gap-2 mt-auto">
                     <span className="text-gray-300 text-sm">
@@ -178,19 +241,16 @@ const Gallery = memo(({ atoms, onSelect }: {
                     </span>
                   </div>
                 )}
-
-                {atom.content_type === 'link' && atom.link && (
-                  <a
-                    href={atom.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute bottom-3 right-3 bg-white rounded-full p-2 shadow hover:bg-gray-100 transition z-10"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <LinkIcon className="w-5 h-5 text-gray-700" />
-                  </a>
-                )}
               </div>
+              <a
+                href={atom.link || ""}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-3 right-3 bg-white rounded-full p-3 shadow hover:bg-gray-100 transition z-10 border border-gray-200"
+                onClick={e => e.stopPropagation()}
+              >
+                <LinkIcon className="w-5 h-5 text-gray-700" />
+              </a>
             </GalleryTileContent>
           </GalleryTile>
         );
@@ -248,7 +308,7 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
 
   return (
     <section className="flex flex-col w-full items-center gap-6">
-      <Gallery atoms={filteredAtoms} onSelect={setSelectedAtom} />
+      <Gallery atoms={filteredAtoms} onSelect={setSelectedAtom} searchTerm={searchTerm} selectedContentTypes={selectedContentTypes} selectedCreator={selectedCreator} />
     </section>
   );
 };
