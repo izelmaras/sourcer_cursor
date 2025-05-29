@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LiveLinkPreviewProps {
   url: string;
@@ -6,57 +6,73 @@ interface LiveLinkPreviewProps {
   height?: number | string;
 }
 
+interface OgData {
+  ogImage?: { url: string } | { url: string }[];
+  ogTitle?: string;
+  ogDescription?: string;
+  [key: string]: any;
+}
+
 export const LiveLinkPreview: React.FC<LiveLinkPreviewProps> = ({ url, children, height = 200 }) => {
-  const [failed, setFailed] = useState(false);
+  const [ogData, setOgData] = useState<OgData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasTimedOut, setHasTimedOut] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    setFailed(false);
+    let cancelled = false;
     setLoading(true);
-    setHasTimedOut(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      setHasTimedOut(true);
-    }, 4000); // 4 seconds grace period
+    setError(false);
+    setOgData(null);
+    fetch('/api/og-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        if (!cancelled) setOgData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      cancelled = true;
     };
   }, [url]);
 
-  const handleLoad = () => {
-    setLoading(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-  };
-  const handleError = () => {
-    setFailed(true);
-    setLoading(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-  };
+  if (loading) {
+    return (
+      <div style={{ position: 'relative', width: '100%', height, border: '1.5px solid #cbd5e1', borderRadius: 8 }} className="overflow-hidden flex items-center justify-center bg-gray-50">
+        <span>Loading preview…</span>
+      </div>
+    );
+  }
 
-  if ((failed || hasTimedOut) && !loading) {
-    return null;
+  if (error || !ogData || (!ogData.ogImage && !ogData.ogTitle && !ogData.ogDescription)) {
+    return <>{children}</>;
+  }
+
+  // Handle ogImage as array or object
+  let imageUrl = '';
+  if (Array.isArray(ogData.ogImage)) {
+    imageUrl = ogData.ogImage[0]?.url;
+  } else if (ogData.ogImage && typeof ogData.ogImage === 'object') {
+    imageUrl = ogData.ogImage.url;
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height, border: '1.5px solid #cbd5e1', borderRadius: 8 }} className="overflow-hidden">
-      {loading && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9', zIndex: 1
-        }}>
-          <span>Loading preview…</span>
-        </div>
+    <div style={{ width: '100%', height, border: '1.5px solid #cbd5e1', borderRadius: 8 }} className="overflow-hidden bg-white flex flex-col">
+      {imageUrl && (
+        <img src={imageUrl} alt={ogData.ogTitle || 'Preview'} style={{ width: '100%', height: '60%', objectFit: 'cover' }} />
       )}
-      <iframe
-        src={url}
-        title="Live Link Preview"
-        style={{ width: '100%', height: '100%', border: 0, display: loading ? 'none' : 'block', borderRadius: 8 }}
-        sandbox="allow-scripts allow-same-origin allow-popups"
-        onLoad={handleLoad}
-        onError={handleError}
-      />
+      <div className="p-2 flex-1 flex flex-col justify-center">
+        {ogData.ogTitle && <div className="font-semibold text-sm mb-1 line-clamp-1">{ogData.ogTitle}</div>}
+        {ogData.ogDescription && <div className="text-xs text-gray-500 line-clamp-2">{ogData.ogDescription}</div>}
+      </div>
     </div>
   );
 }; 

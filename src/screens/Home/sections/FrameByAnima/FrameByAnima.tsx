@@ -187,21 +187,16 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
               {atom.content_type === 'link' && atom.link && (
                 <div className="mb-2 flex justify-center">
                   <LiveLinkPreview url={atom.link || ""} height={240}>
-                    <div className="flex flex-col items-center justify-center w-full h-full">
-                      {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
-                        <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
-                      ) : (
-                        <img
-                          src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
-                          alt={atom.title}
-                          className="w-full h-40 object-cover rounded"
-                        />
-                      )}
-                      <h4 className="mt-2 text-white text-sm sm:text-base font-medium break-words line-clamp-2">{atom.title}</h4>
-                      {atom.description && (
-                        <p className="text-gray-300 text-xs sm:text-sm break-words line-clamp-2">{atom.description}</p>
-                      )}
-                    </div>
+                    {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
+                      <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
+                    ) : atom.link ? (
+                      <img
+                        src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
+                        alt={atom.title}
+                        className="w-full h-40 object-cover rounded"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : null}
                   </LiveLinkPreview>
                 </div>
               )}

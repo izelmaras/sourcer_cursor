@@ -20,6 +20,7 @@ import { VideoPlayer } from "../../components/ui/video-player";
 import { Switch } from "../../components/ui/switch";
 import { supabase } from '../../lib/supabase';
 import { LiveLinkPreview } from "../../components/ui/LiveLinkPreview";
+import { IframeWithFallback } from "../../components/ui/IframeWithFallback";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -387,9 +388,11 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                       {/* Add live link preview for link content */}
                       {currentAtom.content_type === 'link' && (
                         <div className="mb-6 flex justify-center">
-                          <LiveLinkPreview url={currentAtom.link ? currentAtom.link : ""} height={520}>
-                            <span style={{display:'none'}} />
-                          </LiveLinkPreview>
+                          <IframeWithFallback url={currentAtom.link || ""} height={520}>
+                            <LiveLinkPreview url={currentAtom.link || ""} height={520}>
+                              <span style={{display:'none'}} />
+                            </LiveLinkPreview>
+                          </IframeWithFallback>
                         </div>
                       )}
                       <TagList tags={currentAtom.tags || []} onTagClick={handleTagSelect} />
