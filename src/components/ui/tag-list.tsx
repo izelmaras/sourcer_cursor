@@ -1,5 +1,5 @@
 import { Button } from "./button";
-import { colors } from "../../lib/design-tokens";
+import { X as XIcon, Tag as TagIcon } from "lucide-react";
 import { useAtomStore } from "../../store/atoms";
 
 interface TagListProps {
@@ -14,15 +14,15 @@ export const TagList = ({ tags, onTagClick }: TagListProps): JSX.Element => {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {tags.map((tag) => (
+      {tags.filter(Boolean).map((tag) => (
         <Button
           key={tag}
-          variant={selectedTags.includes(tag) ? "default" : "ghost"}
           size="sm"
-          className={`${
-            selectedTags.includes(tag) ? colors.tag.selected : colors.tag.unselected
-          }`}
+          selected={selectedTags.includes(tag)}
+          leftIcon={<TagIcon className="h-4 w-4" />}
+          {...(onTagClick ? { rightIcon: <XIcon className="h-4 w-4" /> } : {})}
           onClick={() => onTagClick?.(tag)}
+          aria-pressed={selectedTags.includes(tag)}
         >
           {tag}
         </Button>

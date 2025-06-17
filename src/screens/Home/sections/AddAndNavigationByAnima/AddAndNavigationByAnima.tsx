@@ -96,6 +96,7 @@ export const AddAndNavigationByAnima = ({
             placeholder="Search"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
+            color="light"
             className="w-full"
           />
           <button
@@ -117,27 +118,17 @@ export const AddAndNavigationByAnima = ({
             {/* Content Types */}
             <div className="flex flex-wrap gap-2">
               <Button
-                variant={selectedContentTypes.length === 0 ? 'default' : 'ghost'}
                 size="sm"
+                selected={selectedContentTypes.length === 0}
                 onClick={() => onContentTypeSelect('All')}
-                className={`h-8 px-4 ${
-                  selectedContentTypes.length === 0
-                    ? colors.tag.selected
-                    : colors.tag.unselected
-                }`}
               >
                 All
               </Button>
               {contentTypes.map((type) => (
                 <Button
                   key={type.type}
-                  variant={selectedContentTypes.includes(type.type) ? 'default' : 'ghost'}
                   size="sm"
-                  className={`h-8 px-4 ${
-                    selectedContentTypes.includes(type.type)
-                      ? colors.tag.selected
-                      : colors.tag.unselected
-                  }`}
+                  selected={selectedContentTypes.includes(type.type)}
                   onClick={() => onContentTypeSelect(type.type)}
                 >
                   {type.label}
@@ -166,13 +157,8 @@ export const AddAndNavigationByAnima = ({
                       {getCategoryTags(category.id).map(tag => (
                         <Button
                           key={tag.id}
-                          variant={selectedTags.includes(tag.name) ? "default" : "ghost"}
                           size="sm"
-                          className={`h-8 px-4 ${
-                            selectedTags.includes(tag.name)
-                              ? colors.tag.selected
-                              : colors.tag.unselected
-                          }`}
+                          selected={selectedTags.includes(tag.name)}
                           onClick={() => toggleTag(tag.name)}
                         >
                           <span className="truncate">
@@ -218,13 +204,8 @@ export const AddAndNavigationByAnima = ({
                         {uncategorizedTags.map(tag => (
                           <Button
                             key={tag.id}
-                            variant={selectedTags.includes(tag.name) ? "default" : "ghost"}
                             size="sm"
-                            className={`h-8 px-4 ${
-                              selectedTags.includes(tag.name)
-                                ? colors.tag.selected
-                                : colors.tag.unselected
-                            }`}
+                            selected={selectedTags.includes(tag.name)}
                             onClick={() => toggleTag(tag.name)}
                           >
                             <span className="truncate">
@@ -240,32 +221,22 @@ export const AddAndNavigationByAnima = ({
 
                         {/* Flagged Items Button */}
                         <Button
-                          variant={selectedTags.includes('flagged') ? "default" : "ghost"}
                           size="sm"
+                          selected={selectedTags.includes('flagged')}
                           onClick={handleFlaggedToggle}
-                          className={`h-8 px-4 ${
-                            selectedTags.includes('flagged')
-                              ? colors.tag.selected
-                              : colors.tag.unselected
-                          }`}
+                          leftIcon={<Flag className="w-4 h-4" />}
                         >
-                          <Flag className="w-4 h-4 mr-2" />
-                          <span>Flagged</span>
+                          Flagged
                           <span className="ml-2 text-xs opacity-60">({flaggedCount})</span>
                         </Button>
                         {/* Tagless Items Button */}
                         <Button
-                          variant={selectedTags.includes('no-tag') ? "default" : "ghost"}
                           size="sm"
+                          selected={selectedTags.includes('no-tag')}
                           onClick={() => toggleTag('no-tag')}
-                          className={`h-8 px-4 ${
-                            selectedTags.includes('no-tag')
-                              ? colors.tag.selected
-                              : colors.tag.unselected
-                          }`}
+                          leftIcon={<ImageOff className="w-4 h-4" />}
                         >
-                          <ImageOff className="w-4 h-4 mr-2" />
-                          <span>No Tag</span>
+                          No Tag
                           <span className="ml-2 text-xs opacity-60">({taglessCount})</span>
                         </Button>
                       </div>

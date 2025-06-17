@@ -375,34 +375,38 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
             <Input 
               value={editingName} 
               onChange={e => setEditingName(e.target.value)} 
-              className={inputStyle} 
               placeholder="Name" 
+              color="light"
+              inputSize="lg"
             />
             {selectedType === OrganizeType.Creators && (
               <>
                 <Input 
                   value={editingLinks.link1} 
                   onChange={e => setEditingLinks({ ...editingLinks, link1: e.target.value })} 
-                  className={inputStyle} 
                   placeholder="Link 1" 
+                  color="light"
+                  inputSize="lg"
                 />
                 <Input 
                   value={editingLinks.link2} 
                   onChange={e => setEditingLinks({ ...editingLinks, link2: e.target.value })} 
-                  className={inputStyle} 
                   placeholder="Link 2" 
+                  color="light"
+                  inputSize="lg"
                 />
                 <Input 
                   value={editingLinks.link3} 
                   onChange={e => setEditingLinks({ ...editingLinks, link3: e.target.value })} 
-                  className={inputStyle} 
                   placeholder="Link 3" 
+                  color="light"
+                  inputSize="lg"
                 />
               </>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={onCancel} className={buttonStyle}>Cancel</Button>
-              <Button size="sm" onClick={onSave} className={buttonStyle}>Save</Button>
+              <Button size="sm" onClick={onCancel}>Cancel</Button>
+              <Button size="sm" selected={true} onClick={onSave}>Save</Button>
             </div>
           </div>
         </div>
@@ -445,37 +449,32 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
               <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    variant={selectedType === 'Categories' ? 'default' : 'ghost'}
                     size="sm"
-                    className={buttonStyle}
+                    selected={selectedType === 'Categories'}
                     onClick={() => setSelectedType('Categories')}
                   >
                     Categories
                   </Button>
                   <Button
-                    variant={selectedType === 'Tags' ? 'default' : 'ghost'}
                     size="sm"
-                    className={buttonStyle}
+                    selected={selectedType === 'Tags'}
                     onClick={() => setSelectedType('Tags')}
                   >
                     Tags
                   </Button>
                   <Button
-                    variant={selectedType === 'Creators' ? 'default' : 'ghost'}
                     size="sm"
-                    className={buttonStyle}
+                    selected={selectedType === 'Creators'}
                     onClick={() => setSelectedType('Creators')}
                   >
                     Creators
                   </Button>
                 </div>
                 <Button
-                  variant="ghost"
                   size="sm"
-                  className={`${buttonStyle} border-dashed`}
+                  leftIcon={<PlusIcon className="h-4 w-4 mr-2" />}
                   onClick={() => setIsAddDialogOpen(true)}
                 >
-                  <PlusIcon className="h-4 w-4 mr-2" />
                   Add {selectedType === 'Categories' ? 'category' : selectedType.slice(0, -1).toLowerCase()}
                 </Button>
               </div>
@@ -523,55 +522,35 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
 
                         {editingId !== item.id && (
                           <div className="flex gap-2">
-                            {(selectedType === 'Categories' || selectedType === 'Tags') && (
+                            {(isCategory(item) || isTag(item)) && (
                               <Button
-                                variant="ghost"
                                 size="sm"
-                                onClick={() => handleTogglePrivate(item.id, (isCategory(item) || isTag(item)) ? !!item.is_private : false)}
-                                className={buttonStyle}
-                              >
-                                {(isCategory(item) || isTag(item)) && item.is_private ? (
-                                  <LockIcon className="h-4 w-4" />
-                                ) : (
-                                  <UnlockIcon className="h-4 w-4" />
-                                )}
-                              </Button>
-                            )}
-                            {(selectedType === 'Categories' || selectedType === 'Creators') && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenSetTags(item.id)}
-                                className={buttonStyle}
-                              >
-                                <PlusIcon className="h-4 w-4" />
-                                <span className="ml-2">Tags</span>
-                              </Button>
+                                leftIcon={item.is_private ? <LockIcon className="h-4 w-4" /> : <UnlockIcon className="h-4 w-4" />}
+                                onClick={() => handleTogglePrivate(item.id, !!item.is_private)}
+                              />
                             )}
                             <Button
-                              variant="ghost"
                               size="sm"
+                              leftIcon={<PlusIcon className="h-4 w-4" />}
+                              onClick={() => handleOpenSetTags(item.id)}
+                            >
+                              Tags
+                            </Button>
+                            <Button
+                              size="sm"
+                              leftIcon={<PencilIcon className="h-4 w-4" />}
                               onClick={() => handleEdit(item.id, item.name, item)}
-                              className={buttonStyle}
-                            >
-                              <PencilIcon className="h-4 w-4" />
-                            </Button>
+                            />
                             <Button
-                              variant="ghost"
                               size="sm"
+                              leftIcon={<ArrowUpIcon className="h-4 w-4" />}
                               onClick={() => handleMerge(item.id)}
-                              className={buttonStyle}
-                            >
-                              <ArrowUpIcon className="h-4 w-4" />
-                            </Button>
+                            />
                             <Button
-                              variant="ghost"
                               size="sm"
+                              leftIcon={<TrashIcon className="h-4 w-4" />}
                               onClick={() => handleDelete(item.id)}
-                              className={buttonStyle}
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </Button>
+                            />
                           </div>
                         )}
                       </div>
@@ -592,7 +571,8 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                 }
                               }
                             }}
-                            className={inputStyle}
+                            color="light"
+                            inputSize="lg"
                           />
 
                           {selectedTags.length > 0 && (
@@ -600,14 +580,12 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                               {selectedTags.map((tag) => (
                                 <Button
                                   key={tag}
-                                  variant="secondary"
                                   size="sm"
-                                  className={buttonStyle}
+                                  rightIcon={<XIcon className="h-4 w-4 ml-2" />}
                                   onClick={() => handleRemoveTag(tag)}
                                   tabIndex={-1}
                                 >
                                   {tag}
-                                  <XIcon className="h-4 w-4 ml-2" />
                                 </Button>
                               ))}
                             </div>
@@ -618,7 +596,6 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                               {filteredTags.map((tag) => (
                                 <Button
                                   key={tag.id}
-                                  variant="ghost"
                                   size="sm"
                                   className={`justify-start h-8 px-3 ${buttonStyle}`}
                                   onClick={() => handleTagClick(tag.name)}
@@ -628,7 +605,6 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                               ))}
                               {showCreateTag && (
                                 <Button
-                                  variant="ghost"
                                   size="sm"
                                   className={`justify-start h-8 px-3 ${buttonStyle}`}
                                   onClick={handleCreateTag}
@@ -640,25 +616,12 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                           )}
 
                           <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedItemId(null);
-                                setSelectedTags([]);
-                                setTagSearch('');
-                              }}
-                              className={buttonStyle}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={handleSaveTags}
-                              className={buttonStyle}
-                            >
-                              Save changes
-                            </Button>
+                            <Button size="sm" onClick={() => {
+                              setSelectedItemId(null);
+                              setSelectedTags([]);
+                              setTagSearch('');
+                            }}>Cancel</Button>
+                            <Button size="sm" selected={true} onClick={handleSaveTags}>Save changes</Button>
                           </div>
                         </div>
                       )}
@@ -683,30 +646,21 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                     placeholder="Name"
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
-                    className={inputStyle}
+                    color="light"
+                    inputSize="lg"
                   />
                   {selectedType === 'Categories' && (
                     <Input
                       placeholder="Description"
                       value={newItemDescription}
                       onChange={(e) => setNewItemDescription(e.target.value)}
-                      className={inputStyle}
+                      color="light"
+                      inputSize="lg"
                     />
                   )}
                   <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setIsAddDialogOpen(false)}
-                      className={buttonStyle}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleAdd}
-                      className={buttonStyle}
-                    >
-                      Save changes
-                    </Button>
+                    <Button size="sm" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                    <Button size="sm" selected={true} onClick={handleAdd}>Save changes</Button>
                   </div>
                 </div>
               </ModalBody>
@@ -737,20 +691,8 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                     className={inputStyle}
                   />
                   <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setIsMergeDialogOpen(false)}
-                      className={buttonStyle}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={confirmMerge}
-                      disabled={!mergeTargetId}
-                      className={buttonStyle}
-                    >
-                      Save changes
-                    </Button>
+                    <Button size="sm" onClick={() => setIsMergeDialogOpen(false)}>Cancel</Button>
+                    <Button size="sm" selected={true} disabled={!mergeTargetId} onClick={confirmMerge}>Save changes</Button>
                   </div>
                 </div>
               </ModalBody>
@@ -770,20 +712,8 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                   Are you sure you want to delete this {selectedType.toLowerCase()}? This action cannot be undone.
                 </p>
                 <div className="flex justify-end gap-2 mt-4">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setIsDeleteDialogOpen(false)}
-                    className={buttonStyle}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={confirmDelete}
-                    className={buttonStyle}
-                  >
-                    Delete
-                  </Button>
+                  <Button size="sm" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+                  <Button size="sm" selected={true} style={{borderColor: 'red', color: 'red'}} onClick={confirmDelete}>Delete</Button>
                 </div>
               </ModalBody>
             </ModalWrapper>

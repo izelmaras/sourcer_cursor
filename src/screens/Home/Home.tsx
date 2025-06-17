@@ -95,62 +95,53 @@ export const Home = (): JSX.Element => {
             {selectedContentTypes.map(type => (
               <Button
                 key={type}
-                variant="secondary"
                 size="sm"
-                className="bg-gray-900 text-white hover:bg-gray-800"
+                selected={true}
+                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
                 onClick={() => handleContentTypeSelect(type)}
               >
                 {type}
-                <XIcon className="w-4 h-4 ml-2" />
               </Button>
             ))}
-
             {searchTerm && (
               <Button
-                variant="secondary"
                 size="sm"
-                className="bg-gray-900 text-white hover:bg-gray-800"
-                onClick={() => setSearchTerm('')}
+                selected={true}
+                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
+                onClick={() => setSearchTerm("")}
               >
                 Search: {searchTerm}
-                <XIcon className="w-4 h-4 ml-2" />
               </Button>
             )}
-
             {selectedCategory && (
               <Button
-                variant="secondary"
                 size="sm"
-                className="bg-gray-900 text-white hover:bg-gray-800"
+                selected={true}
+                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
                 onClick={() => useAtomStore.getState().setDefaultCategory(null)}
               >
                 Category: {selectedCategory.name}
-                <XIcon className="w-4 h-4 ml-2" />
               </Button>
             )}
-
             {selectedCreator && (
               <Button
-                variant="secondary"
                 size="sm"
-                className="bg-gray-900 text-white hover:bg-gray-800"
+                selected={true}
+                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
                 onClick={() => setSelectedCreator(null)}
               >
                 Creator: {selectedCreator}
-                <XIcon className="w-4 h-4 ml-2" />
               </Button>
             )}
-
             {selectedTags.map((tag) => (
               <Button
                 key={tag}
-                variant="secondary"
                 size="sm"
-                className="bg-gray-900 text-white hover:bg-gray-800"
+                selected={true}
+                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
                 onClick={() => toggleTag(tag)}
               >
                 {tag}
-                <XIcon className="w-4 h-4 ml-2" />
               </Button>
             ))}
           </div>

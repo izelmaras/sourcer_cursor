@@ -1,33 +1,72 @@
 import * as React from "react";
 import { cn } from "../../lib/utils";
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "ghost" | "secondary" | "destructive";
-  size?: "default" | "sm" | "lg";
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  size?: "sm" | "lg";
+  selected?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  color?: "light" | "dark";
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
+  (
+    {
+      className,
+      size = "sm",
+      selected = false,
+      leftIcon,
+      rightIcon,
+      color = "light",
+      children,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
+    const isDark = color === "dark";
+    const hasLeftIcon = !!leftIcon;
+    const hasRightIcon = !!rightIcon;
+    const hasText = !!children && (typeof children !== 'string' || children.trim() !== '');
+    // Icon-only: no text, only one icon
+    const isIconOnly = (hasLeftIcon || hasRightIcon) && !hasText;
+    // Fixed height for all buttons
+    const fixedHeight = size === "lg" ? "h-12" : "h-10";
+    const fixedTextSize = size === "lg" ? "text-base" : "text-sm";
+    const fixedPadding = isIconOnly
+      ? "px-0 w-10 justify-center"
+      : hasLeftIcon && hasRightIcon
+        ? (size === "sm" ? "px-3" : "px-5")
+        : hasLeftIcon || hasRightIcon
+          ? (size === "sm" ? "px-3" : "px-5")
+          : (size === "sm" ? "px-4" : "px-6");
     return (
       <button
+        ref={ref}
         className={cn(
-          "inline-flex items-center justify-center rounded-lg font-medium transition-colors",
-          "focus:outline-none focus:ring-2 focus:ring-blue-200",
-          "disabled:pointer-events-none disabled:opacity-50",
-          {
-            "bg-white text-black border border-gray-200 shadow-sm hover:bg-gray-50 hover:shadow-md": variant === "default",
-            "bg-white text-black border border-gray-200 hover:bg-gray-50": ["ghost", "secondary"].includes(variant),
-            "bg-red-600 text-white hover:bg-red-700 border border-red-600 shadow-sm": variant === "destructive",
-            "h-12 px-6 py-2": size === "default",
-            "h-9 px-4": size === "sm",
-            "h-14 px-8": size === "lg",
-          },
+          "inline-flex items-center justify-center rounded-[12px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:pointer-events-none disabled:opacity-50 border",
+          fixedHeight,
+          fixedTextSize,
+          fixedPadding,
+          isDark
+            ? selected
+              ? "bg-black text-white border-black hover:bg-gray-900"
+              : "bg-gray-800 text-white border-gray-700 hover:bg-gray-700"
+            : selected
+              ? "bg-black text-white border-black hover:bg-gray-900"
+              : "bg-gray-100 text-black border-gray-200 hover:bg-gray-200",
+          disabled && "opacity-60 cursor-not-allowed",
           className
         )}
-        ref={ref}
+        disabled={disabled}
         {...props}
-      />
+      >
+        <span className={cn("flex items-center w-full gap-2 justify-center truncate")}> 
+          {hasLeftIcon && <span className="flex items-center shrink-0 justify-center">{leftIcon}</span>}
+          {hasText && <span className="truncate flex-1 text-center flex items-center justify-center">{children}</span>}
+          {hasRightIcon && <span className="flex items-center shrink-0 justify-center">{rightIcon}</span>}
+        </span>
+      </button>
     );
   }
 );

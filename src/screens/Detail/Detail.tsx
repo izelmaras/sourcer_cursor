@@ -327,27 +327,27 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end items-center">
                   {hasMedia && !isVideo && (
-                    <IconButton onClick={() => setIsZoomed(true)} tabIndex={-1}>
+                    <IconButton onClick={() => setIsZoomed(true)} tabIndex={-1} color="light">
                       <ZoomInIcon className="h-5 w-5" />
                     </IconButton>
                   )}
                   {currentAtom.media_source_link && (
-                    <IconButton onClick={handleDownload} disabled={isDownloading}>
+                    <IconButton onClick={handleDownload} disabled={isDownloading} color="light">
                       <DownloadIcon className="h-5 w-5" />
                     </IconButton>
                   )}
                   {currentAtom.link && (
-                    <IconButton onClick={handleExternalLink}>
+                    <IconButton onClick={handleExternalLink} color="light">
                       <LinkIcon className="h-5 w-5" />
                     </IconButton>
                   )}
-                  <IconButton onClick={() => setIsEditing(!isEditing)}>
+                  <IconButton onClick={() => setIsEditing(!isEditing)} color="light">
                     <PencilIcon className="h-5 w-5" />
                   </IconButton>
-                  <IconButton onClick={() => setIsDeleteModalOpen(true)}>
+                  <IconButton onClick={() => setIsDeleteModalOpen(true)} color="light">
                     <TrashIcon className="h-5 w-5" />
                   </IconButton>
-                  <IconButton onClick={handleClose}>
+                  <IconButton onClick={handleClose} color="light">
                     <XIcon className="h-5 w-5" />
                   </IconButton>
                 </div>
@@ -401,9 +401,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                           {atomCreators.map((creator) => (
                             <Button
                               key={creator.id}
-                              variant="secondary"
                               size="sm"
-                              className="rounded-full bg-gray-900 text-white hover:bg-gray-800 px-4 py-1 text-sm font-medium shadow"
+                              selected={false}
                               onClick={() => handleCreatorSelect(creator.name)}
                             >
                               {creator.name}
@@ -418,9 +417,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                               return trimmed ? (
                                 <Button
                                   key={trimmed + idx}
-                                  variant="secondary"
                                   size="sm"
-                                  className="rounded-full bg-gray-900 text-white hover:bg-gray-800 px-4 py-1 text-sm font-medium shadow"
+                                  selected={false}
                                   onClick={() => handleCreatorSelect(trimmed)}
                                 >
                                   {trimmed}
@@ -437,19 +435,22 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         placeholder="Title"
-                        className={colors.button.secondary}
+                        color="light"
+                        inputSize="lg"
                       />
                       <Input
                         value={editDescription}
                         onChange={(e) => setEditDescription(e.target.value)}
                         placeholder="Description"
-                        className={colors.button.secondary}
+                        color="light"
+                        inputSize="lg"
                       />
                       <Input
                         value={newCreator}
                         onChange={(e) => setNewCreator(e.target.value)}
                         placeholder="Add creator"
-                        className={colors.button.secondary}
+                        color="light"
+                        inputSize="lg"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && newCreator.trim()) {
                             if (!editCreators.includes(newCreator.trim())) {
@@ -471,14 +472,12 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                           {editCreators.map((name, idx) => (
                             <Button
                               key={name + idx}
-                              variant="secondary"
                               size="sm"
-                              className="rounded-full bg-gray-900 text-white hover:bg-gray-800 px-4 py-1 text-sm font-medium shadow"
+                              rightIcon={<XIcon className="h-4 w-4 ml-2" />}
                               onClick={() => setEditCreators(editCreators.filter((n) => n !== name))}
                               tabIndex={-1}
                             >
                               {name}
-                              <XIcon className="h-4 w-4 ml-2" />
                             </Button>
                           ))}
                         </div>
@@ -499,7 +498,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                               }
                             }
                           }}
-                          className={colors.button.secondary}
+                          color="light"
+                          inputSize="lg"
                         />
 
                         {editTags.length > 0 && (
@@ -507,14 +507,12 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                             {editTags.map((tag) => (
                               <Button
                                 key={tag}
-                                variant="secondary"
                                 size="sm"
-                                className={colors.button.secondary}
+                                rightIcon={<XIcon className="h-4 w-4 ml-2" />}
                                 onClick={() => handleRemoveTag(tag)}
                                 tabIndex={-1}
                               >
                                 {tag}
-                                <XIcon className="h-4 w-4 ml-2" />
                               </Button>
                             ))}
                           </div>
@@ -525,9 +523,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                             {filteredTags.map((tag) => (
                               <Button
                                 key={tag.id}
-                                variant="ghost"
                                 size="sm"
-                                className={`justify-start h-8 px-3 ${colors.tag.unselected}`}
+                                selected={false}
                                 onClick={() => handleTagClick(tag.name)}
                               >
                                 {tag.name}
@@ -535,12 +532,11 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                             ))}
                             {showCreateTag && (
                               <Button
-                                variant="ghost"
                                 size="sm"
-                                className={`justify-start h-8 px-3 ${colors.tag.unselected}`}
+                                selected={false}
                                 onClick={handleCreateTag}
                               >
-                                Create "{tagSearch}"
+                                {`Create "${tagSearch}"`}
                               </Button>
                             )}
                           </div>
@@ -572,12 +568,14 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                     <IconButton
                       onClick={() => handleNavigate('prev')}
                       className="hover:bg-gray-100 transition-colors"
+                      color="light"
                     >
                       <ChevronLeftIcon className="h-5 w-5" />
                     </IconButton>
                     <IconButton
                       onClick={() => handleNavigate('next')}
                       className="hover:bg-gray-100 transition-colors"
+                      color="light"
                     >
                       <ChevronRightIcon className="h-5 w-5" />
                     </IconButton>
@@ -600,13 +598,13 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
       {isZoomed && !isVideo && (
         <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50">
           <div className="absolute top-4 right-4 flex items-center gap-2">
-            <IconButton onClick={handleZoomOut} disabled={scale <= ZOOM_SETTINGS.MIN_SCALE} className="bg-gray-100">
+            <IconButton onClick={handleZoomOut} disabled={scale <= ZOOM_SETTINGS.MIN_SCALE} className="bg-gray-100" color="light">
               <MinusIcon className="h-6 w-6 text-black" />
             </IconButton>
-            <IconButton onClick={handleZoomIn} disabled={scale >= ZOOM_SETTINGS.MAX_SCALE} className="bg-gray-100">
+            <IconButton onClick={handleZoomIn} disabled={scale >= ZOOM_SETTINGS.MAX_SCALE} className="bg-gray-100" color="light">
               <PlusIcon className="h-6 w-6 text-black" />
             </IconButton>
-            <IconButton onClick={() => setIsZoomed(false)} className="bg-gray-100">
+            <IconButton onClick={() => setIsZoomed(false)} className="bg-gray-100" color="light">
               <XIcon className="h-6 w-6 text-black" />
             </IconButton>
           </div>

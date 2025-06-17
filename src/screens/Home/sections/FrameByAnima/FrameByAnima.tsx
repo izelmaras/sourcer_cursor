@@ -12,6 +12,7 @@ import { getYouTubeVideoId } from "../../../../lib/utils";
 import { LiveLinkPreview } from "../../../../components/ui/LiveLinkPreview";
 import Masonry from 'react-masonry-css';
 import { VideoThumbnail } from "../../../../components/ui/video-thumbnail";
+import { Button } from "../../../../components/ui/button";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -237,12 +238,12 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       </Masonry>
       {visibleCount < atoms.length && (
         <div className="flex justify-center w-full mt-6">
-          <button
-            className="px-6 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors shadow"
+          <Button
+            size="lg"
             onClick={() => setVisibleCount((prev) => Math.min(prev + 12, atoms.length))}
           >
             Load More
-          </button>
+          </Button>
         </div>
       )}
     </>
