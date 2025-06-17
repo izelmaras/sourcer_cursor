@@ -25,14 +25,21 @@ export const RichTextEditor = ({ value, onChange, placeholder = 'Write something
   });
 
   return (
-    <div className={cn(
-      'min-h-[150px] rounded-lg border bg-white px-3 py-2 text-sm ring-offset-white focus-within:outline-none focus-within:ring-2 focus-within:ring-neutral-950 focus-within:ring-offset-2',
-      className
-    )}>
+    <div
+      className={cn(
+        'min-h-[120px] rounded-[12px] border border-gray-200 bg-white text-base text-gray-900 px-5 py-3 focus-within:outline-none focus-within:ring-2 focus-within:ring-gray-900 transition-colors duration-200',
+        className
+      )}
+    >
       <EditorContent 
         editor={editor} 
-        className="prose prose-sm max-w-none focus:outline-none"
+        className="w-full min-h-[80px] outline-none bg-transparent text-base text-gray-900 focus:outline-none"
+        style={{ margin: 0, padding: 0 }}
       />
+      <style>{`
+        .tiptap p { margin: 0; }
+        .tiptap { padding: 0 !important; }
+      `}</style>
     </div>
   );
 };

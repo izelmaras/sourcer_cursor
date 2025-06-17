@@ -6,6 +6,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ModalHeader, ModalBody } from "../../components/ui/modal";
 import { SearchBar } from "../../components/ui/search-bar";
 import { ModalWrapper } from "../../components/ui/modal-wrapper";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { PencilIcon, ArrowUpIcon, TrashIcon, PlusIcon, LockIcon, UnlockIcon, XIcon, LinkIcon, StarIcon } from "lucide-react";
 import type { Database } from '../../types/supabase';
 
@@ -82,14 +83,14 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
-  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
-  const [mergeSourceId, setMergeSourceId] = useState<number | null>(null);
-  const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearch, setTagSearch] = useState('');
+  const [mergeSourceId, setMergeSourceId] = useState<number | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
+  const [mergeSearch, setMergeSearch] = useState('');
 
   useEffect(() => {
     const initializeData = async () => {
@@ -206,31 +207,6 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     setDeleteItemId(null);
   };
 
-  const handleMerge = async (sourceId: number) => {
-    setMergeSourceId(sourceId);
-    setIsMergeDialogOpen(true);
-  };
-
-  const confirmMerge = async () => {
-    if (!mergeSourceId || !mergeTargetId) return;
-
-    switch (selectedType) {
-      case 'Categories':
-        await mergeCategory(mergeSourceId, mergeTargetId);
-        break;
-      case 'Tags':
-        await mergeTag(mergeSourceId, mergeTargetId);
-        break;
-      case 'Creators':
-        await mergeCreator(mergeSourceId, mergeTargetId);
-        break;
-    }
-
-    setIsMergeDialogOpen(false);
-    setMergeSourceId(null);
-    setMergeTargetId(null);
-  };
-
   const handleOpenSetTags = (itemId: number) => {
     setSelectedItemId(itemId);
     const itemTags = selectedType === 'Categories' 
@@ -322,6 +298,30 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
         break;
     }
     onClose();
+  };
+
+  const handleInlineMerge = async () => {
+    if (!mergeSourceId || !mergeTargetId) return;
+    switch (selectedType) {
+      case 'Categories':
+        await mergeCategory(mergeSourceId, mergeTargetId);
+        break;
+      case 'Tags':
+        await mergeTag(mergeSourceId, mergeTargetId);
+        break;
+      case 'Creators':
+        await mergeCreator(mergeSourceId, mergeTargetId);
+        break;
+    }
+    setMergeSourceId(null);
+    setMergeTargetId(null);
+    setMergeSearch('');
+  };
+
+  const handleCancelInlineMerge = () => {
+    setMergeSourceId(null);
+    setMergeTargetId(null);
+    setMergeSearch('');
   };
 
   const filteredItems = getItems().filter(item => 
@@ -443,194 +443,235 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     <Dialog.Root open={open} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-4xl px-4 sm:px-6 outline-none">
-          <ModalWrapper className="h-[80vh] flex flex-col">
-            <ModalHeader className="flex-none">
-              <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-                <div className="flex flex-wrap gap-2">
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl px-4 sm:px-6 outline-none max-h-[80vh]">
+          <ScrollArea className="max-h-[80vh] overflow-y-auto">
+            <ModalWrapper className="max-h-[80vh] h-auto flex flex-col">
+              <ModalHeader className="flex-none pb-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      selected={selectedType === 'Categories'}
+                      onClick={() => setSelectedType('Categories')}
+                    >
+                      Categories
+                    </Button>
+                    <Button
+                      size="sm"
+                      selected={selectedType === 'Tags'}
+                      onClick={() => setSelectedType('Tags')}
+                    >
+                      Tags
+                    </Button>
+                    <Button
+                      size="sm"
+                      selected={selectedType === 'Creators'}
+                      onClick={() => setSelectedType('Creators')}
+                    >
+                      Creators
+                    </Button>
+                  </div>
                   <Button
                     size="sm"
-                    selected={selectedType === 'Categories'}
-                    onClick={() => setSelectedType('Categories')}
+                    leftIcon={<PlusIcon className="h-4 w-4 mr-2" />}
+                    onClick={() => setIsAddDialogOpen(true)}
                   >
-                    Categories
-                  </Button>
-                  <Button
-                    size="sm"
-                    selected={selectedType === 'Tags'}
-                    onClick={() => setSelectedType('Tags')}
-                  >
-                    Tags
-                  </Button>
-                  <Button
-                    size="sm"
-                    selected={selectedType === 'Creators'}
-                    onClick={() => setSelectedType('Creators')}
-                  >
-                    Creators
+                    Add {selectedType === 'Categories' ? 'category' : selectedType.slice(0, -1).toLowerCase()}
                   </Button>
                 </div>
-                <Button
-                  size="sm"
-                  leftIcon={<PlusIcon className="h-4 w-4 mr-2" />}
-                  onClick={() => setIsAddDialogOpen(true)}
-                >
-                  Add {selectedType === 'Categories' ? 'category' : selectedType.slice(0, -1).toLowerCase()}
-                </Button>
-              </div>
-            </ModalHeader>
-            <ModalBody className="flex-1 overflow-hidden">
-              <div className="h-full flex flex-col gap-4">
-                <SearchBar
-                  placeholder={`Search ${selectedType.toLowerCase()}`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className={inputStyle}
-                />
-
-                <div className="flex-1 overflow-y-auto">
-                  {filteredItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-gray-50 rounded-lg p-4 mb-2 last:mb-0"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <OrganizeListItem
-                          item={item}
-                          selectedType={selectedType as OrganizeType}
-                          isEditing={editingId === item.id}
-                          isDefaultCategory={item.id === defaultCategoryId}
-                          editingName={editingName}
-                          editingLinks={editingLinks}
-                          inputStyle={inputStyle}
-                          buttonStyle={buttonStyle}
-                          onEdit={() => handleEdit(item.id, item.name, item)}
-                          onSave={handleSave}
-                          onCancel={() => {
-                            setEditingId(null);
-                            setEditingName('');
-                            setEditingLinks({ link1: '', link2: '', link3: '' });
-                          }}
-                          onMerge={() => handleMerge(item.id)}
-                          onDelete={() => handleDelete(item.id)}
-                          onOpenSetTags={() => handleOpenSetTags(item.id)}
-                          onTogglePrivate={() => handleTogglePrivate(item.id, (isCategory(item) || isTag(item)) ? !!item.is_private : false)}
-                          onItemClick={() => handleItemClick(item)}
-                          setEditingName={setEditingName}
-                          setEditingLinks={setEditingLinks}
-                        />
-
-                        {editingId !== item.id && (
-                          <div className="flex gap-2">
-                            {(isCategory(item) || isTag(item)) && (
+              </ModalHeader>
+              <ModalBody className="flex-1">
+                <div className="h-full flex flex-col gap-4">
+                  <SearchBar
+                    placeholder={`Search ${selectedType.toLowerCase()}`}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={inputStyle}
+                  />
+                  <div className="flex-1">
+                    {filteredItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-gray-50 rounded-lg p-4 mb-2 last:mb-0"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <OrganizeListItem
+                            item={item}
+                            selectedType={selectedType as OrganizeType}
+                            isEditing={editingId === item.id}
+                            isDefaultCategory={item.id === defaultCategoryId}
+                            editingName={editingName}
+                            editingLinks={editingLinks}
+                            inputStyle={inputStyle}
+                            buttonStyle={buttonStyle}
+                            onEdit={() => handleEdit(item.id, item.name, item)}
+                            onSave={handleSave}
+                            onCancel={() => {
+                              setEditingId(null);
+                              setEditingName('');
+                              setEditingLinks({ link1: '', link2: '', link3: '' });
+                            }}
+                            onMerge={() => {
+                              setMergeSourceId(item.id);
+                              setMergeTargetId(null);
+                              setMergeSearch('');
+                            }}
+                            onDelete={() => handleDelete(item.id)}
+                            onOpenSetTags={() => handleOpenSetTags(item.id)}
+                            onTogglePrivate={() => handleTogglePrivate(item.id, (isCategory(item) || isTag(item)) ? !!item.is_private : false)}
+                            onItemClick={() => handleItemClick(item)}
+                            setEditingName={setEditingName}
+                            setEditingLinks={setEditingLinks}
+                          />
+                          {editingId !== item.id && (
+                            <div className="flex gap-2">
+                              {(isCategory(item) || isTag(item)) && (
+                                <Button
+                                  size="sm"
+                                  leftIcon={item.is_private ? <LockIcon className="h-4 w-4" /> : <UnlockIcon className="h-4 w-4" />}
+                                  onClick={() => handleTogglePrivate(item.id, !!item.is_private)}
+                                />
+                              )}
                               <Button
                                 size="sm"
-                                leftIcon={item.is_private ? <LockIcon className="h-4 w-4" /> : <UnlockIcon className="h-4 w-4" />}
-                                onClick={() => handleTogglePrivate(item.id, !!item.is_private)}
+                                leftIcon={<PlusIcon className="h-4 w-4" />}
+                                onClick={() => handleOpenSetTags(item.id)}
+                              >
+                                Tags
+                              </Button>
+                              <Button
+                                size="sm"
+                                leftIcon={<PencilIcon className="h-4 w-4" />}
+                                onClick={() => handleEdit(item.id, item.name, item)}
                               />
+                              <Button
+                                size="sm"
+                                leftIcon={<ArrowUpIcon className="h-4 w-4" />}
+                                onClick={() => {
+                                  setMergeSourceId(item.id);
+                                  setMergeTargetId(null);
+                                  setMergeSearch('');
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                leftIcon={<TrashIcon className="h-4 w-4" />}
+                                onClick={() => handleDelete(item.id)}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        {mergeSourceId === item.id && (
+                          <div className="mt-4 flex flex-col gap-2 bg-gray-100 rounded p-3">
+                            <Input
+                              placeholder={`Search target ${selectedType.toLowerCase()}`}
+                              value={mergeSearch}
+                              onChange={e => {
+                                setMergeSearch(e.target.value);
+                                setMergeTargetId(null);
+                              }}
+                              className="w-full"
+                            />
+                            <div className="max-h-32 overflow-y-auto">
+                              {getItems()
+                                .filter(target =>
+                                  target.id !== item.id &&
+                                  target.name.toLowerCase().includes(mergeSearch.toLowerCase())
+                                )
+                                .slice(0, 8)
+                                .map(target => (
+                                  <div
+                                    key={target.id}
+                                    className={`px-2 py-1 rounded cursor-pointer ${mergeTargetId === target.id ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
+                                    onClick={() => setMergeTargetId(target.id)}
+                                  >
+                                    {target.name}
+                                  </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-2 justify-end mt-2">
+                              <Button size="sm" onClick={handleCancelInlineMerge}>Cancel</Button>
+                              <Button size="sm" selected={true} disabled={!mergeTargetId} onClick={handleInlineMerge}>Merge</Button>
+                            </div>
+                          </div>
+                        )}
+                        {selectedItemId === item.id && (
+                          <div className="mt-4 space-y-4">
+                            <Input
+                              placeholder="Add tag"
+                              value={tagSearch}
+                              onChange={(e) => setTagSearch(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (filteredTags.length > 0) {
+                                    handleTagClick(filteredTags[0].name);
+                                  } else if (showCreateTag) {
+                                    handleCreateTag();
+                                  }
+                                }
+                              }}
+                              color="light"
+                              inputSize="lg"
+                            />
+
+                            {selectedTags.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {selectedTags.map((tag) => (
+                                  <Button
+                                    key={tag}
+                                    size="sm"
+                                    rightIcon={<XIcon className="h-4 w-4 ml-2" />}
+                                    onClick={() => handleRemoveTag(tag)}
+                                    tabIndex={-1}
+                                  >
+                                    {tag}
+                                  </Button>
+                                ))}
+                              </div>
                             )}
-                            <Button
-                              size="sm"
-                              leftIcon={<PlusIcon className="h-4 w-4" />}
-                              onClick={() => handleOpenSetTags(item.id)}
-                            >
-                              Tags
-                            </Button>
-                            <Button
-                              size="sm"
-                              leftIcon={<PencilIcon className="h-4 w-4" />}
-                              onClick={() => handleEdit(item.id, item.name, item)}
-                            />
-                            <Button
-                              size="sm"
-                              leftIcon={<ArrowUpIcon className="h-4 w-4" />}
-                              onClick={() => handleMerge(item.id)}
-                            />
-                            <Button
-                              size="sm"
-                              leftIcon={<TrashIcon className="h-4 w-4" />}
-                              onClick={() => handleDelete(item.id)}
-                            />
+
+                            {(tagSearch || showCreateTag) && (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                {filteredTags.map((tag) => (
+                                  <Button
+                                    key={tag.id}
+                                    size="sm"
+                                    className={`justify-start h-8 px-3 ${buttonStyle}`}
+                                    onClick={() => handleTagClick(tag.name)}
+                                  >
+                                    {tag.name}
+                                  </Button>
+                                ))}
+                                {showCreateTag && (
+                                  <Button
+                                    size="sm"
+                                    className={`justify-start h-8 px-3 ${buttonStyle}`}
+                                    onClick={handleCreateTag}
+                                  >
+                                    Create "{tagSearch}"
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" onClick={() => {
+                                setSelectedItemId(null);
+                                setSelectedTags([]);
+                                setTagSearch('');
+                              }}>Cancel</Button>
+                              <Button size="sm" selected={true} onClick={handleSaveTags}>Save changes</Button>
+                            </div>
                           </div>
                         )}
                       </div>
-
-                      {selectedItemId === item.id && (
-                        <div className="mt-4 space-y-4">
-                          <Input
-                            placeholder="Add tag"
-                            value={tagSearch}
-                            onChange={(e) => setTagSearch(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                if (filteredTags.length > 0) {
-                                  handleTagClick(filteredTags[0].name);
-                                } else if (showCreateTag) {
-                                  handleCreateTag();
-                                }
-                              }
-                            }}
-                            color="light"
-                            inputSize="lg"
-                          />
-
-                          {selectedTags.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {selectedTags.map((tag) => (
-                                <Button
-                                  key={tag}
-                                  size="sm"
-                                  rightIcon={<XIcon className="h-4 w-4 ml-2" />}
-                                  onClick={() => handleRemoveTag(tag)}
-                                  tabIndex={-1}
-                                >
-                                  {tag}
-                                </Button>
-                              ))}
-                            </div>
-                          )}
-
-                          {(tagSearch || showCreateTag) && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                              {filteredTags.map((tag) => (
-                                <Button
-                                  key={tag.id}
-                                  size="sm"
-                                  className={`justify-start h-8 px-3 ${buttonStyle}`}
-                                  onClick={() => handleTagClick(tag.name)}
-                                >
-                                  {tag.name}
-                                </Button>
-                              ))}
-                              {showCreateTag && (
-                                <Button
-                                  size="sm"
-                                  className={`justify-start h-8 px-3 ${buttonStyle}`}
-                                  onClick={handleCreateTag}
-                                >
-                                  Create "{tagSearch}"
-                                </Button>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" onClick={() => {
-                              setSelectedItemId(null);
-                              setSelectedTags([]);
-                              setTagSearch('');
-                            }}>Cancel</Button>
-                            <Button size="sm" selected={true} onClick={handleSaveTags}>Save changes</Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </ModalBody>
-          </ModalWrapper>
+              </ModalBody>
+            </ModalWrapper>
+          </ScrollArea>
         </Dialog.Content>
       </Dialog.Portal>
 
@@ -661,38 +702,6 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                   <div className="flex justify-end gap-2">
                     <Button size="sm" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
                     <Button size="sm" selected={true} onClick={handleAdd}>Save changes</Button>
-                  </div>
-                </div>
-              </ModalBody>
-            </ModalWrapper>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-
-      <Dialog.Root open={isMergeDialogOpen} onOpenChange={() => setIsMergeDialogOpen(false)}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg px-4 sm:px-6 outline-none">
-            <ModalWrapper>
-              <ModalHeader>Merge {selectedType.slice(0, -1)}</ModalHeader>
-              <ModalBody>
-                <div className="space-y-4 py-4">
-                  <SearchBar
-                    placeholder={`Search target ${selectedType.toLowerCase()}`}
-                    onChange={(e) => {
-                      const target = getItems().find(item => 
-                        item.name.toLowerCase().includes(e.target.value.toLowerCase()) &&
-                        item.id !== mergeSourceId
-                      );
-                      if (target) {
-                        setMergeTargetId(target.id);
-                      }
-                    }}
-                    className={inputStyle}
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" onClick={() => setIsMergeDialogOpen(false)}>Cancel</Button>
-                    <Button size="sm" selected={true} disabled={!mergeTargetId} onClick={confirmMerge}>Save changes</Button>
                   </div>
                 </div>
               </ModalBody>

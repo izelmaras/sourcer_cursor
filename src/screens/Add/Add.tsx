@@ -3,7 +3,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { useAtomStore } from "../../store/atoms";
-import { Modal } from "../../components/ui/modal";
+import * as Dialog from "@radix-ui/react-dialog";
 import { BookAudioIcon as AudioIcon, BookIcon, FileTextIcon, FilmIcon, FolderIcon, HeartIcon, ImageIcon, LinkIcon, ListIcon, LightbulbIcon, MapPinIcon, MusicIcon, NewspaperIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, XIcon, ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { ContentFields } from "../../components/ui/content-fields";
 import { colors } from "../../lib/design-tokens";
@@ -46,7 +46,6 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
   const [locationAddress, setLocationAddress] = useState("");
   const [locationLatitude, setLocationLatitude] = useState<number | null>(null);
   const [locationLongitude, setLocationLongitude] = useState<number | null>(null);
-  const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
 
   useEffect(() => {
     fetchTags();
@@ -207,234 +206,200 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
     !selectedCreators.includes(creatorSearch);
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <ModalWrapper>
-        <ScrollArea className="max-h-[calc(100vh-12rem)] overflow-y-auto">
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {contentTypes.map((type) => (
-                <Button
-                  key={type.type}
-                  variant={selectedType === type.type ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSelectedType(type.type)}
-                  className={`h-8 px-3 justify-start gap-2 ${
-                    selectedType === type.type
-                      ? colors.tag.selected
-                      : colors.tag.unselected
-                  }`}
-                >
-                  {type.icon}
-                  {type.label}
-                </Button>
-              ))}
-            </div>
+    <Dialog.Root open={open} onOpenChange={onClose}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl px-4 sm:px-6 outline-none max-h-[80vh]">
+          <ModalWrapper>
+            <ScrollArea className="max-h-[calc(80vh-0rem)] overflow-y-auto">
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3">
+                  {contentTypes.map((type) => (
+                    <Button
+                      key={type.type}
+                      size="lg"
+                      selected={selectedType === type.type}
+                      leftIcon={type.icon}
+                      onClick={() => setSelectedType(type.type)}
+                      className="w-full"
+                    >
+                      {type.label}
+                    </Button>
+                  ))}
+                </div>
 
-            <div className="space-y-4">
-              <Input
-                placeholder="Source link (direct media URL)"
-                value={sourceLink}
-                onChange={(e) => setSourceLink(e.target.value)}
-                className={colors.button.secondary}
-              />
+                <div className="space-y-4">
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Add tag"
+                      value={tagSearch}
+                      onChange={(e) => setTagSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (filteredTags.length > 0) {
+                            handleTagClick(filteredTags[0].name);
+                          } else if (showCreateTag) {
+                            handleCreateTag();
+                          }
+                        }
+                      }}
+                      className={colors.button.secondary}
+                    />
 
-              <div className="space-y-4">
-                <Input
-                  placeholder="Add tag"
-                  value={tagSearch}
-                  onChange={(e) => setTagSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (filteredTags.length > 0) {
-                        handleTagClick(filteredTags[0].name);
-                      } else if (showCreateTag) {
-                        handleCreateTag();
-                      }
-                    }
-                  }}
-                  className={colors.button.secondary}
-                />
+                    {selectedTags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedTags.map((tag) => (
+                          <Button
+                            key={tag}
+                            size="lg"
+                            rightIcon={<XIcon className="h-4 w-4 ml-2" />}
+                            onClick={() => removeTag(tag)}
+                            tabIndex={-1}
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
 
-                {selectedTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTags.map((tag) => (
-                      <Button
-                        key={tag}
-                        variant="secondary"
-                        size="sm"
-                        className={colors.button.secondary}
-                        onClick={() => removeTag(tag)}
-                        tabIndex={-1}
-                      >
-                        {tag}
-                        <XIcon className="h-4 w-4 ml-2" />
-                      </Button>
-                    ))}
-                  </div>
-                )}
-
-                {(tagSearch || showCreateTag) && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {filteredTags.map((tag) => (
-                      <Button
-                        key={tag.id}
-                        variant="ghost"
-                        size="sm"
-                        className={`justify-start h-8 px-3 ${colors.tag.unselected}`}
-                        onClick={() => handleTagClick(tag.name)}
-                      >
-                        {tag.name}
-                      </Button>
-                    ))}
-                    {showCreateTag && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`justify-start h-8 px-3 ${colors.tag.unselected}`}
-                        onClick={handleCreateTag}
-                      >
-                        Create "{tagSearch}"
-                      </Button>
+                    {(tagSearch || showCreateTag) && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {filteredTags.map((tag) => (
+                          <Button
+                            key={tag.id}
+                            size="lg"
+                            onClick={() => handleTagClick(tag.name)}
+                          >
+                            {tag.name}
+                          </Button>
+                        ))}
+                        {showCreateTag && (
+                          <Button
+                            size="lg"
+                            onClick={handleCreateTag}
+                          >
+                            Create "{tagSearch}"
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              <div className="space-y-4">
-                <Input
-                  placeholder="Add creator"
-                  value={creatorSearch}
-                  onChange={(e) => setCreatorSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (filteredCreators.length > 0) {
-                        handleCreatorClick(filteredCreators[0].name);
-                      } else if (showCreateCreator) {
-                        handleCreateCreator();
-                      }
-                    }
-                  }}
-                  className={colors.button.secondary}
-                />
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Add creator"
+                      value={creatorSearch}
+                      onChange={(e) => setCreatorSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (filteredCreators.length > 0) {
+                            handleCreatorClick(filteredCreators[0].name);
+                          } else if (showCreateCreator) {
+                            handleCreateCreator();
+                          }
+                        }
+                      }}
+                      className={colors.button.secondary}
+                    />
 
-                {selectedCreators.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCreators.map((creator) => (
-                      <Button
-                        key={creator}
-                        variant="secondary"
-                        size="sm"
-                        className={colors.button.secondary}
-                        onClick={() => removeCreator(creator)}
-                        tabIndex={-1}
-                      >
-                        {creator}
-                        <XIcon className="h-4 w-4 ml-2" />
-                      </Button>
-                    ))}
-                  </div>
-                )}
+                    {selectedCreators.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCreators.map((creator) => (
+                          <Button
+                            key={creator}
+                            size="lg"
+                            rightIcon={<XIcon className="h-4 w-4 ml-2" />}
+                            onClick={() => removeCreator(creator)}
+                            tabIndex={-1}
+                          >
+                            {creator}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
 
-                {(creatorSearch || showCreateCreator) && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {filteredCreators.map((creator) => (
-                      <Button
-                        key={creator.id}
-                        variant="ghost"
-                        size="sm"
-                        className={`justify-start h-8 px-3 ${colors.tag.unselected}`}
-                        onClick={() => handleCreatorClick(creator.name)}
-                      >
-                        {creator.name}
-                      </Button>
-                    ))}
-                    {showCreateCreator && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`justify-start h-8 px-3 ${colors.tag.unselected}`}
-                        onClick={handleCreateCreator}
-                      >
-                        Create "{creatorSearch}"
-                      </Button>
+                    {(creatorSearch || showCreateCreator) && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {filteredCreators.map((creator) => (
+                          <Button
+                            key={creator.id}
+                            size="lg"
+                            onClick={() => handleCreatorClick(creator.name)}
+                          >
+                            {creator.name}
+                          </Button>
+                        ))}
+                        {showCreateCreator && (
+                          <Button
+                            size="lg"
+                            onClick={handleCreateCreator}
+                          >
+                            Create "{creatorSearch}"
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              <Input
-                placeholder="External link (webpage URL)"
-                value={externalLink}
-                onChange={(e) => setExternalLink(e.target.value)}
-                className={colors.button.secondary}
-              />
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsMoreDetailsOpen(!isMoreDetailsOpen)}
-                className={`w-full justify-between ${colors.button.secondary}`}
-              >
-                More details
-                {isMoreDetailsOpen ? (
-                  <ChevronDownIcon className="h-4 w-4" />
-                ) : (
-                  <ChevronRightIcon className="h-4 w-4" />
-                )}
-              </Button>
-
-              {isMoreDetailsOpen && (
-                <div className="space-y-4 pt-4">
                   <Input
-                    placeholder="Title (optional)"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="External link (webpage URL)"
+                    value={externalLink}
+                    onChange={(e) => setExternalLink(e.target.value)}
                     className={colors.button.secondary}
                   />
 
-                  <div className="space-y-2">
-                    <RichTextEditor
-                      value={description}
-                      onChange={setDescription}
-                      placeholder="Add a description..."
-                      className={`min-h-[120px] ${colors.button.secondary}`}
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Title (optional)"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className={colors.button.secondary}
+                    />
+
+                    <div className="space-y-2">
+                      <RichTextEditor
+                        value={description}
+                        onChange={setDescription}
+                        placeholder="Add a description..."
+                        className={`min-h-[120px] ${colors.button.secondary}`}
+                      />
+                    </div>
+
+                    <ContentFields
+                      type={selectedType}
+                      locationAddress={locationAddress}
+                      setLocationAddress={setLocationAddress}
+                      locationLatitude={locationLatitude}
+                      setLocationLatitude={setLocationLatitude}
+                      locationLongitude={locationLongitude}
+                      setLocationLongitude={setLocationLongitude}
+                      sourceLink={sourceLink}
+                      setSourceLink={setSourceLink}
+                      steps={steps}
+                      setSteps={setSteps}
+                      materials={materials}
+                      setMaterials={setMaterials}
+                      className={colors.button.secondary}
                     />
                   </div>
 
-                  <ContentFields
-                    type={selectedType}
-                    locationAddress={locationAddress}
-                    setLocationAddress={setLocationAddress}
-                    locationLatitude={locationLatitude}
-                    setLocationLatitude={setLocationLatitude}
-                    locationLongitude={locationLongitude}
-                    setLocationLongitude={setLocationLongitude}
-                    sourceLink={sourceLink}
-                    setSourceLink={setSourceLink}
-                    steps={steps}
-                    setSteps={setSteps}
-                    materials={materials}
-                    setMaterials={setMaterials}
-                    className={colors.button.secondary}
-                  />
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      size="lg"
+                      onClick={handleSave}
+                      disabled={!selectedType}
+                    >
+                      Save
+                    </Button>
+                  </div>
                 </div>
-              )}
-
-              <div className="flex justify-end pt-4">
-                <Button
-                  onClick={handleSave}
-                  disabled={!selectedType}
-                  className={colors.button.primary}
-                >
-                  Save
-                </Button>
               </div>
-            </div>
-          </div>
-        </ScrollArea>
-      </ModalWrapper>
-    </Modal>
+            </ScrollArea>
+          </ModalWrapper>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 };
