@@ -9,7 +9,7 @@ const GalleryTile = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border bg-white/30 backdrop-blur-md text-card-foreground shadow-lg overflow-hidden relative",
+      "rounded-[2px] border bg-white/30 backdrop-blur-md text-card-foreground shadow-[0_4px_12px_rgba(0,0,0,0.06)] overflow-hidden relative",
       "border border-white/40",
       className,
     )}
