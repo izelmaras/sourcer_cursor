@@ -21,6 +21,7 @@ import { Switch } from "../../components/ui/switch";
 import { supabase } from '../../lib/supabase';
 import { LiveLinkPreview } from "../../components/ui/LiveLinkPreview";
 import { IframeWithFallback } from "../../components/ui/IframeWithFallback";
+import { Tag as TagIcon } from "lucide-react";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -64,6 +65,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
   const [editTags, setEditTags] = useState<string[]>(currentAtom?.tags || []);
   const [tagSearch, setTagSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [editSourceUrl, setEditSourceUrl] = useState(currentAtom?.media_source_link || '');
+  const [editExternalLink, setEditExternalLink] = useState(currentAtom?.link || '');
 
   const [atomCreators, setAtomCreators] = useState<{ id: number, name: string }[]>([]);
 
@@ -85,6 +88,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
       setEditCreators(currentAtom.creator_name ? currentAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
       setEditTags(currentAtom.tags || []);
       setIsFlagged(currentAtom.flag_for_deletion || false);
+      setEditSourceUrl(currentAtom.media_source_link || '');
+      setEditExternalLink(currentAtom.link || '');
     }
   }, [currentAtom]);
 
@@ -240,6 +245,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
         description: editDescription || null,
         creator_name: editCreators.join(', '), // legacy, join table is updated in store
         tags: editTags,
+        media_source_link: editSourceUrl,
+        link: editExternalLink,
       });
       setIsEditing(false);
     } catch (error) {
@@ -309,6 +316,15 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
     !tags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) &&
     !editTags.includes(tagSearch);
 
+  // Debug output for image rendering
+  console.log('DetailView debug:', {
+    media_source_link: currentAtom.media_source_link,
+    content_type: currentAtom.content_type,
+    imageLoaded,
+    hasMedia,
+    isVideo
+  });
+
   return (
     <>
       {open && (
@@ -365,12 +381,13 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                       />
                     ) : (
                       <img
-                        src={currentAtom.media_source_link || ''}
-                        alt={currentAtom.title || ''}
+                        src={currentAtom.media_source_link || '/placeholder-image.png'}
+                        alt={currentAtom.title || 'Image not available'}
                         className={`max-h-[60vh] w-auto object-contain transition-opacity duration-300 ${
                           imageLoaded ? 'opacity-100' : 'opacity-0'
                         }`}
                         onLoad={() => setImageLoaded(true)}
+                        onError={e => { e.currentTarget.src = '/placeholder-image.png'; }}
                       />
                     )}
                   </div>
@@ -395,7 +412,21 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                           </IframeWithFallback>
                         </div>
                       )}
-                      <TagList tags={currentAtom.tags || []} onTagClick={handleTagSelect} />
+                      {currentAtom.tags && currentAtom.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {currentAtom.tags.map((tag) => (
+                            <Button
+                              key={tag}
+                              size="sm"
+                              leftIcon={<TagIcon className="h-4 w-4" />}
+                              rightIcon={<XIcon className="h-4 w-4" />}
+                              onClick={() => handleTagSelect(tag)}
+                            >
+                              {tag}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                       {atomCreators.length > 0 ? (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {atomCreators.map((creator) => (
@@ -442,6 +473,20 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms }: DetailProps):
                         value={editDescription}
                         onChange={(e) => setEditDescription(e.target.value)}
                         placeholder="Description"
+                        color="light"
+                        inputSize="lg"
+                      />
+                      <Input
+                        value={editSourceUrl}
+                        onChange={(e) => setEditSourceUrl(e.target.value)}
+                        placeholder="Source URL (media)"
+                        color="light"
+                        inputSize="lg"
+                      />
+                      <Input
+                        value={editExternalLink}
+                        onChange={(e) => setEditExternalLink(e.target.value)}
+                        placeholder="External Link"
                         color="light"
                         inputSize="lg"
                       />
