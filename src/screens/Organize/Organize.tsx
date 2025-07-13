@@ -242,6 +242,13 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
       : getCreatorTags(selectedItemId);
     const existingTagNames = existingTags.map(tag => tag.name);
 
+    // Add new tags to the database if they don't exist
+    for (const tagName of selectedTags) {
+      if (!tags.find(t => t.name === tagName)) {
+        await addTag({ name: tagName, count: 1 });
+      }
+    }
+
     // Remove tags that were unselected
     for (const tag of existingTags) {
       if (!selectedTags.includes(tag.name)) {
@@ -256,7 +263,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     // Add newly selected tags
     for (const tagName of selectedTags) {
       if (!existingTagNames.includes(tagName)) {
-        const tag = tags.find(t => t.name === tagName);
+        const tag = tags.find(t => t.name === tagName) || (await fetchTags(), tags.find(t => t.name === tagName));
         if (tag) {
           if (selectedType === 'Categories') {
             await assignTagToCategory(selectedItemId, tag.id);
@@ -488,6 +495,33 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className={inputStyle}
                   />
+                  {isAddDialogOpen && (
+                    <div className="bg-gray-50 rounded-lg p-4 mb-2 flex flex-col gap-2">
+                      <div className="text-base font-medium text-gray-900 mb-2">
+                        {selectedType === 'Categories' ? 'Add Category' : selectedType === 'Tags' ? 'Add Tag' : 'Add Creator'}
+                      </div>
+                      <Input
+                        placeholder="Name"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        color="light"
+                        inputSize="lg"
+                      />
+                      {selectedType === 'Categories' && (
+                        <Input
+                          placeholder="Description"
+                          value={newItemDescription}
+                          onChange={(e) => setNewItemDescription(e.target.value)}
+                          color="light"
+                          inputSize="lg"
+                        />
+                      )}
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                        <Button size="sm" selected={true} onClick={handleAdd}>Save changes</Button>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex-1">
                     {filteredItems.map((item) => (
                       <div
@@ -674,41 +708,6 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
           </ScrollArea>
         </Dialog.Content>
       </Dialog.Portal>
-
-      <Dialog.Root open={isAddDialogOpen} onOpenChange={() => setIsAddDialogOpen(false)}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg px-4 sm:px-6 outline-none">
-            <ModalWrapper>
-              <ModalHeader>Add {selectedType.slice(0, -1)}</ModalHeader>
-              <ModalBody>
-                <div className="space-y-4 py-4">
-                  <Input
-                    placeholder="Name"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    color="light"
-                    inputSize="lg"
-                  />
-                  {selectedType === 'Categories' && (
-                    <Input
-                      placeholder="Description"
-                      value={newItemDescription}
-                      onChange={(e) => setNewItemDescription(e.target.value)}
-                      color="light"
-                      inputSize="lg"
-                    />
-                  )}
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                    <Button size="sm" selected={true} onClick={handleAdd}>Save changes</Button>
-                  </div>
-                </div>
-              </ModalBody>
-            </ModalWrapper>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
 
       <Dialog.Root open={isDeleteDialogOpen} onOpenChange={() => setIsDeleteDialogOpen(false)}>
         <Dialog.Portal>
