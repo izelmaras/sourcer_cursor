@@ -8,39 +8,39 @@ export const typography = {
     caption: 'text-base leading-relaxed',
   },
   colors: {
-    primary: 'text-gray-900',
-    secondary: 'text-gray-600',
-    muted: 'text-gray-400',
+    primary: 'text-white',
+    secondary: 'text-white/80',
+    muted: 'text-white/60',
   }
 };
 
 export const colors = {
   background: {
-    primary: 'bg-white',
-    secondary: 'bg-gray-50',
-    muted: 'bg-gray-100',
+    primary: 'bg-white/10 backdrop-blur-sm',
+    secondary: 'bg-white/5 backdrop-blur-sm',
+    muted: 'bg-white/3 backdrop-blur-sm',
     overlay: 'bg-white/95',
   },
   border: {
-    primary: 'border-gray-200',
-    secondary: 'border-gray-100',
+    primary: 'border-white/20',
+    secondary: 'border-white/10',
   },
   hover: {
-    primary: 'hover:bg-gray-50',
-    secondary: 'hover:bg-gray-100',
+    primary: 'hover:bg-white/8',
+    secondary: 'hover:bg-white/5',
   },
   button: {
     base: 'h-10 rounded-lg px-4 py-2 text-base font-normal',
-    primary: 'bg-gray-900 text-white hover:bg-gray-800',
-    secondary: 'bg-gray-100 text-gray-900 border border-gray-900 shadow-sm hover:bg-gray-200',
-    ghost: 'text-gray-900 hover:bg-gray-50',
-    selected: 'bg-gray-900 text-white hover:bg-gray-800',
-    unselected: 'bg-gray-100 text-gray-900 border border-gray-900 shadow-sm hover:bg-gray-200',
+    primary: 'bg-white/15 backdrop-blur-sm text-white border border-white/20 hover:bg-white/20',
+    secondary: 'bg-white/5 backdrop-blur-sm text-white border border-white/10 shadow-sm hover:bg-white/8',
+    ghost: 'text-white hover:bg-white/5',
+    selected: 'bg-white/15 backdrop-blur-sm text-white border border-white/20 hover:bg-white/20',
+    unselected: 'bg-white/5 backdrop-blur-sm text-white border border-white/10 shadow-sm hover:bg-white/8',
   },
   tag: {
     base: 'h-8 px-4 py-2 rounded-full text-base font-normal',
-    selected: 'bg-gray-900 text-white hover:bg-gray-800',
-    unselected: 'bg-gray-100 text-gray-900 border border-gray-900 shadow-sm hover:bg-gray-200',
+    selected: 'bg-white/15 backdrop-blur-sm text-white border border-white/20 hover:bg-white/20',
+    unselected: 'bg-white/5 backdrop-blur-sm text-white border border-white/10 shadow-sm hover:bg-white/8',
   }
 };
 
@@ -76,6 +76,6 @@ export const layout = {
     }
   },
   input: {
-    base: 'h-10 rounded-lg px-4 py-2 text-base font-normal bg-white text-gray-900 border border-gray-200 focus:ring-1 focus:ring-gray-900'
+    base: 'h-10 rounded-lg px-4 py-2 text-base font-normal bg-white/5 backdrop-blur-sm text-white border border-white/10 focus:ring-1 focus:ring-white/20'
   }
 };

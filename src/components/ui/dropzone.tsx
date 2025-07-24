@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useDropzone as useReactDropzone } from 'react-dropzone';
 import { ImageIcon, Loader2Icon } from 'lucide-react';
 

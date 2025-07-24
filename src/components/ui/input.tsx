@@ -3,7 +3,7 @@ import { cn } from "../../lib/utils";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   containerClassName?: string;
-  color?: "light" | "dark";
+  color?: "light" | "dark" | "glass";
   inputSize?: "sm" | "lg";
 }
 
@@ -14,6 +14,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ) => {
     // Style logic
     const isDark = color === "dark";
+    const isGlass = color === "glass";
     return (
       <div className={cn("relative w-full", containerClassName)}>
         <input
@@ -24,7 +25,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "rounded-[12px]",
             isDark
               ? "bg-neutral-800 text-white border-neutral-700 placeholder:text-neutral-400 focus:ring-neutral-600 focus:border-neutral-600"
-              : "bg-white text-gray-900 border-gray-200 placeholder:text-gray-500 focus:ring-gray-900 focus:border-gray-900",
+              : isGlass
+              ? "bg-white/5 backdrop-blur-sm text-white border-white/10 placeholder:text-white/60 focus:ring-white/20 focus:border-white/20 hover:bg-white/8"
+              : "bg-white text-gray-900 border-gray-200 placeholder:text-white focus:ring-gray-900 focus:border-gray-900",
             "disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}

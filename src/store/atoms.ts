@@ -18,6 +18,59 @@ const normalizeTagName = (name: string): string => {
     .replace(/\s+/g, ' ');
 };
 
+// Performance optimization: Create lookup maps for faster access
+const createCategoryTagLookup = (categoryTags: CategoryTag[], tags: Tag[]) => {
+  const lookup = new Map<number, Tag[]>();
+  
+  // Group category tags by category ID
+  const categoryTagGroups = new Map<number, number[]>();
+  categoryTags.forEach(ct => {
+    if (!categoryTagGroups.has(ct.category_id)) {
+      categoryTagGroups.set(ct.category_id, []);
+    }
+    categoryTagGroups.get(ct.category_id)!.push(ct.tag_id);
+  });
+  
+  // Create tag lookup for faster access
+  const tagMap = new Map(tags.map(tag => [tag.id, tag]));
+  
+  // Build the final lookup
+  categoryTagGroups.forEach((tagIds, categoryId) => {
+    const categoryTags = tagIds
+      .map(tagId => tagMap.get(tagId))
+      .filter(Boolean) as Tag[];
+    lookup.set(categoryId, categoryTags);
+  });
+  
+  return lookup;
+};
+
+const createCreatorTagLookup = (creatorTags: CreatorTag[], tags: Tag[]) => {
+  const lookup = new Map<number, Tag[]>();
+  
+  // Group creator tags by creator ID
+  const creatorTagGroups = new Map<number, number[]>();
+  creatorTags.forEach(ct => {
+    if (!creatorTagGroups.has(ct.creator_id)) {
+      creatorTagGroups.set(ct.creator_id, []);
+    }
+    creatorTagGroups.get(ct.creator_id)!.push(ct.tag_id);
+  });
+  
+  // Create tag lookup for faster access
+  const tagMap = new Map(tags.map(tag => [tag.id, tag]));
+  
+  // Build the final lookup
+  creatorTagGroups.forEach((tagIds, creatorId) => {
+    const creatorTags = tagIds
+      .map(tagId => tagMap.get(tagId))
+      .filter(Boolean) as Tag[];
+    lookup.set(creatorId, creatorTags);
+  });
+  
+  return lookup;
+};
+
 interface AtomStore {
   atoms: Atom[];
   tags: Tag[];
@@ -31,6 +84,9 @@ interface AtomStore {
   deletingIds: number[];
   defaultCategoryId: number | null;
   isTagDrawerCollapsed: boolean;
+  // Performance optimization: Cached lookups
+  categoryTagLookup: Map<number, Tag[]>;
+  creatorTagLookup: Map<number, Tag[]>;
   fetchAtoms: () => Promise<void>;
   fetchTags: () => Promise<void>;
   fetchCategories: () => Promise<void>;
@@ -79,6 +135,8 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   deletingIds: [],
   defaultCategoryId: null,
   isTagDrawerCollapsed: true,
+  categoryTagLookup: new Map(),
+  creatorTagLookup: new Map(),
 
   fetchAtoms: async () => {
     set({ loading: true });
@@ -120,12 +178,18 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
       }
       
       // Normalize tag names
-      const normalizedTags = data?.map(tag => ({
+      const normalizedTags = data?.map((tag: Tag) => ({
         ...tag,
         name: normalizeTagName(tag.name)
       })) || [];
       
-      set({ tags: normalizedTags });
+      // Rebuild lookups with new tags
+      const categoryTags = get().categoryTags;
+      const creatorTags = get().creatorTags;
+      const categoryTagLookup = createCategoryTagLookup(categoryTags, normalizedTags);
+      const creatorTagLookup = createCreatorTagLookup(creatorTags, normalizedTags);
+      
+      set({ tags: normalizedTags, categoryTagLookup, creatorTagLookup });
     } catch (error) {
       console.error('Failed to fetch tags:', error);
     }
@@ -178,7 +242,11 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         throw error;
       }
       
-      set({ categoryTags: data || [] });
+      const categoryTags = data || [];
+      const tags = get().tags;
+      const categoryTagLookup = createCategoryTagLookup(categoryTags, tags);
+      
+      set({ categoryTags, categoryTagLookup });
     } catch (error) {
       console.error('Failed to fetch category tags:', error);
     }
@@ -195,7 +263,11 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         throw error;
       }
       
-      set({ creatorTags: data || [] });
+      const creatorTags = data || [];
+      const tags = get().tags;
+      const creatorTagLookup = createCreatorTagLookup(creatorTags, tags);
+      
+      set({ creatorTags, creatorTagLookup });
     } catch (error) {
       console.error('Failed to fetch creator tags:', error);
     }
@@ -541,7 +613,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
 
       if (atoms) {
         for (const atom of atoms) {
-          const updatedTags = atom.tags?.map(t => t === sourceTag.name ? targetTag.name : t);
+          const updatedTags = atom.tags?.map((t: string) => t === sourceTag.name ? targetTag.name : t);
           const { error: updateError } = await supabase
             .from('atoms')
             .update({ tags: updatedTags })
@@ -674,13 +746,11 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   },
 
   getCategoryTags: (categoryId) => {
-    const categoryTags = get().categoryTags.filter(ct => ct.category_id === categoryId);
-    return get().tags.filter(tag => categoryTags.some(ct => ct.tag_id === tag.id));
+    return get().categoryTagLookup.get(categoryId) || [];
   },
 
   getCreatorTags: (creatorId) => {
-    const creatorTags = get().creatorTags.filter(ct => ct.creator_id === creatorId);
-    return get().tags.filter(tag => creatorTags.some(ct => ct.tag_id === tag.id));
+    return get().creatorTagLookup.get(creatorId) || [];
   },
 
   toggleTag: (tagName: string) => {

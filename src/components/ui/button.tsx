@@ -2,75 +2,48 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  size?: "sm" | "lg";
+  size?: "sm" | "md" | "lg";
   selected?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  color?: "light" | "dark";
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      className,
-      size = "sm",
-      selected = false,
-      leftIcon,
-      rightIcon,
-      color = "light",
-      children,
-      disabled,
-      ...props
-    },
-    ref
-  ) => {
-    const isDark = color === "dark";
-    const hasLeftIcon = !!leftIcon;
-    const hasRightIcon = !!rightIcon;
-    const hasText = !!children && (typeof children !== 'string' || children.trim() !== '');
-    // Icon-only: no text, only one icon
-    const isIconOnly = (hasLeftIcon || hasRightIcon) && !hasText;
-    // Fixed height for all buttons
-    const fixedHeight = size === "lg" ? "h-12" : "h-10";
-    const fixedTextSize = size === "lg" ? "text-base" : "text-sm";
-    const fixedPadding = isIconOnly
-      ? "px-0 w-10 justify-center"
-      : hasLeftIcon && hasRightIcon
-        ? (size === "sm" ? "px-3" : "px-5")
-        : hasLeftIcon || hasRightIcon
-          ? (size === "sm" ? "px-3" : "px-5")
-          : (size === "sm" ? "px-4" : "px-6");
+  ({ className, size = "md", selected = false, leftIcon, rightIcon, children, ...props }, ref) => {
     return (
       <button
-        ref={ref}
         className={cn(
-          "inline-flex items-center justify-center rounded-[12px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:pointer-events-none disabled:opacity-50 border",
-          fixedHeight,
-          fixedTextSize,
-          fixedPadding,
-          isDark
-            ? selected
-              ? "bg-black text-white border-black hover:bg-gray-900"
-              : "bg-gray-800 text-white border-gray-700 hover:bg-gray-700"
-            : selected
-              ? "bg-black text-white border-black hover:bg-gray-900"
-              : "bg-gray-100 text-black border-gray-200 hover:bg-gray-200",
-          disabled && "opacity-60 cursor-not-allowed",
+          // Base glassmorphism styling with reduced fills
+          "inline-flex items-center justify-center rounded-2xl font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-0",
+          "bg-white/5 backdrop-blur-sm border border-white/10",
+          "text-white hover:text-white",
+          "hover:bg-white/8 hover:border-white/20 hover:scale-105",
+          "focus:bg-white/8 focus:border-white/20 focus:ring-white/20",
+          "active:scale-95",
+          
+          // Size variants
+          size === "sm" && "px-3 py-1.5 text-sm",
+          size === "md" && "px-4 py-2 text-sm",
+          size === "lg" && "px-6 py-3 text-base",
+          
+          // Selected state with reduced fill
+          selected && "bg-white/15 border-white/25 text-white shadow-lg",
+          
+          // Disabled state
+          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
+          
           className
         )}
-        disabled={disabled}
+        ref={ref}
         {...props}
       >
-        <span className={cn("flex items-center w-full gap-2 justify-center truncate")}> 
-          {hasLeftIcon && <span className="flex items-center shrink-0 justify-center">{leftIcon}</span>}
-          {hasText && <span className="truncate flex-1 text-center flex items-center justify-center">{children}</span>}
-          {hasRightIcon && <span className="flex items-center shrink-0 justify-center">{rightIcon}</span>}
-        </span>
+        {leftIcon && <span className="mr-2">{leftIcon}</span>}
+        {children}
+        {rightIcon && <span className="ml-2">{rightIcon}</span>}
       </button>
     );
   }
 );
-
 Button.displayName = "Button";
 
 export { Button };

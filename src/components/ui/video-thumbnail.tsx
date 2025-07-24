@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 
 interface VideoThumbnailProps {
   src: string;
@@ -6,99 +6,68 @@ interface VideoThumbnailProps {
   alt?: string;
   className?: string;
   onThumbnail?: (dataUrl: string) => void;
+  fallbackIcon?: React.ReactNode;
 }
 
 export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
   src,
-  seek = 1,
-  alt = 'Video thumbnail',
+  alt = 'Video',
   className = '',
   onThumbnail,
+  fallbackIcon,
 }) => {
-  const [thumbnail, setThumbnail] = useState<string | null>(null);
-  const [error, setError] = useState(false);
-  const [triedServer, setTriedServer] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    setThumbnail(null);
-    setError(false);
-    setTriedServer(false);
-    const video = videoRef.current;
-    if (!video) return;
-    video.crossOrigin = 'anonymous';
-    video.src = src;
-    video.load();
-    const handleLoadedMetadata = () => {
-      if (video.duration < seek) {
-        setError(true);
-        return;
-      }
-      video.currentTime = seek;
-    };
-    const handleSeeked = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      try {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/png');
-        setThumbnail(dataUrl);
-        onThumbnail?.(dataUrl);
-      } catch (e) {
-        setError(true);
-      }
-    };
-    const handleError = () => setError(true);
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    video.addEventListener('seeked', handleSeeked);
-    video.addEventListener('error', handleError);
-    return () => {
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      video.removeEventListener('seeked', handleSeeked);
-      video.removeEventListener('error', handleError);
-    };
-  }, [src, seek, onThumbnail]);
-
-  // If client-side fails, try server-side
-  useEffect(() => {
-    if (error && !triedServer) {
-      setTriedServer(true);
-      const fetchServerThumb = async () => {
-        try {
-          const apiUrl = `http://localhost:4000/thumbnail?url=${encodeURIComponent(src)}&t=${seek}`;
-          const res = await fetch(apiUrl);
-          if (!res.ok) throw new Error('Server thumbnail failed');
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          setThumbnail(url);
-        } catch {
-          setError(true);
-        }
-      };
-      fetchServerThumb();
-    }
-  }, [error, triedServer, src, seek]);
-
-  if (error && triedServer) {
+  if (!src) {
     return (
-      <div className={`flex items-center justify-center w-full h-full bg-gray-200 text-gray-400 ${className}`}>
-        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7L8 5Z"/></svg>
+      <div className={`flex items-center justify-center bg-gray-100 ${className}`}>
+        {fallbackIcon || (
+          <div className="text-gray-400 text-sm">No video</div>
+        )}
       </div>
     );
   }
-  if (!thumbnail) {
+
+  if (hasError) {
     return (
-      <div className={`flex items-center justify-center w-full h-full bg-gray-200 animate-pulse ${className}`}>
-        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7L8 5Z"/></svg>
-        <video ref={videoRef} style={{ display: 'none' }} />
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <div className={`flex items-center justify-center bg-gray-100 ${className}`}>
+        <div className="text-center p-2">
+          <svg className="w-8 h-8 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <div className="text-xs text-gray-500">Video</div>
+        </div>
       </div>
     );
   }
-  return <img src={thumbnail} alt={alt} className={className} />;
-}; 
+
+  return (
+    <div className="relative">
+      {isLoading && (
+        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
+        </div>
+      )}
+      <video
+        src={src}
+        className={`object-cover ${className}`}
+        muted
+        loop
+        autoPlay
+        playsInline
+        preload="metadata"
+        crossOrigin="anonymous"
+        onLoadedMetadata={() => {
+          setIsLoading(false);
+          // Call onThumbnail with the video src as a simple identifier
+          onThumbnail?.(src);
+        }}
+        onError={() => {
+          setIsLoading(false);
+          setHasError(true);
+        }}
+      />
+    </div>
+  );
+};

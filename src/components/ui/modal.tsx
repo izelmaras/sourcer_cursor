@@ -9,9 +9,10 @@ const Modal = React.forwardRef<
     onClose?: () => void;
     className?: string;
     title?: string;
+    open?: boolean;
   }
->(({ className, children, onClose, title = "Dialog", ...props }, ref) => (
-  <DialogPrimitive.Root {...props}>
+>(({ className, children, onClose, title = "Dialog", open = false, ...props }, ref) => (
+  <DialogPrimitive.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
         className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"

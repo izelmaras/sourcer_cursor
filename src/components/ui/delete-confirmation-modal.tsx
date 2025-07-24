@@ -21,25 +21,25 @@ export const DeleteConfirmationModal = ({
   description = 'Are you sure you want to delete this item? This action cannot be undone.'
 }: DeleteConfirmationModalProps) => {
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={onClose} className="bg-white/10 backdrop-blur-sm rounded-[32px] shadow-xl border border-white/20 max-w-md mx-4">
       <ModalWrapper>
-        <ModalHeader>{title}</ModalHeader>
-        <ModalBody>
-          <p className="text-gray-600">
+        <ModalHeader className="border-b border-white/20 p-6 pb-4">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        </ModalHeader>
+        <ModalBody className="p-6 pt-4">
+          <p className="text-white/80 mb-6">
             {description}
           </p>
-          <div className="flex justify-end gap-2 mt-4">
+          <div className="flex justify-end gap-3">
             <Button
-              variant="ghost"
               onClick={onClose}
-              className="bg-gray-100 text-gray-900 border border-gray-900 shadow-sm hover:bg-gray-200"
+              className="bg-white/5 backdrop-blur-sm text-white border border-white/10 hover:bg-white/8"
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
               onClick={onConfirm}
-              className="bg-gray-100 text-gray-900 border border-gray-900 shadow-sm hover:bg-gray-200"
+              className="bg-red-500/20 backdrop-blur-sm text-red-300 border border-red-400/30 hover:bg-red-500/30"
             >
               Delete
             </Button>

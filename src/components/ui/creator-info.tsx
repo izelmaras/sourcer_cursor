@@ -1,5 +1,5 @@
 import { cn } from "../../lib/utils";
-import { Typography } from "./typography";
+import { UserIcon } from "lucide-react";
 
 interface CreatorInfoProps {
   name: string;
@@ -11,8 +11,9 @@ export function CreatorInfo({ name, className }: CreatorInfoProps) {
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Typography variant="body" color="muted">By</Typography>
-      <Typography variant="body" color="primary">{name}</Typography>
+      <UserIcon className="w-4 h-4 text-white/80" />
+      <span className="text-sm text-white/80">By</span>
+      <span className="text-sm text-white font-medium">{name}</span>
     </div>
   );
 }

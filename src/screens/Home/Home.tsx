@@ -1,19 +1,13 @@
-import React, { useEffect, useCallback, useState } from "react";
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import { AddAndNavigationByAnima } from "./sections/AddAndNavigationByAnima";
 import { GallerySection } from "./sections/FrameByAnima/FrameByAnima";
-import { DetailView } from "../Detail/Detail";
 import { Add } from "../Add/Add";
 import { Organize } from "../Organize/Organize";
 import { useAtomStore } from "../../store/atoms";
-import { useDropzone } from 'react-dropzone';
-import { colors } from "../../lib/design-tokens";
-import { PlusIcon, FolderIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 
 export const Home = (): JSX.Element => {
-  const location = useLocation();
-  const navigate = useNavigate();
   const { 
     fetchAtoms, 
     fetchTags, 
@@ -21,11 +15,8 @@ export const Home = (): JSX.Element => {
     fetchCreators, 
     fetchCategoryTags, 
     fetchDefaultCategory,
-    setDefaultCategory,
-    addAtom, 
     selectedTags, 
     toggleTag,
-    atoms,
     defaultCategoryId,
     categories,
     getCategoryTags,
@@ -38,6 +29,7 @@ export const Home = (): JSX.Element => {
   const [selectedContentTypes, setSelectedContentTypes] = useState<string[]>([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isOrganizeOpen, setIsOrganizeOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -49,6 +41,7 @@ export const Home = (): JSX.Element => {
         fetchDefaultCategory()
       ]);
       await fetchAtoms();
+      setInitialLoading(false);
     };
     
     initializeData();
@@ -59,6 +52,19 @@ export const Home = (): JSX.Element => {
       setTagDrawerCollapsed(false);
     }
   }, [selectedTags, selectedCreator, isTagDrawerCollapsed, setTagDrawerCollapsed]);
+
+  useEffect(() => {
+    const handleOpenAdd = () => setIsAddOpen(true);
+    const handleOpenOrganize = () => setIsOrganizeOpen(true);
+
+    window.addEventListener('openAdd', handleOpenAdd);
+    window.addEventListener('openOrganize', handleOpenOrganize);
+
+    return () => {
+      window.removeEventListener('openAdd', handleOpenAdd);
+      window.removeEventListener('openOrganize', handleOpenOrganize);
+    };
+  }, []);
 
   const hasFilters = selectedTags.length > 0 || selectedContentTypes.length > 0 || searchTerm || defaultCategoryId !== null || selectedCreator !== null;
 
@@ -75,119 +81,116 @@ export const Home = (): JSX.Element => {
 
   const selectedCategory = categories.find(c => c.id === defaultCategoryId);
 
-  return (
-    <main 
-      className={`flex flex-col items-center w-full min-h-screen ${colors.background.primary} py-6 px-6 relative`}
-    >
-      <div className="w-full max-w-7xl space-y-6">
-        <AddAndNavigationByAnima 
-          onViewChange={() => {}} 
-          searchTerm={searchTerm}
-          onSearchChange={(value) => setSearchTerm(value)}
-          selectedContentTypes={selectedContentTypes}
-          onContentTypeSelect={handleContentTypeSelect}
-          selectedCreator={selectedCreator}
-          onCreatorSelect={setSelectedCreator}
-        />
-
-        {hasFilters && (
-          <div className="flex flex-wrap gap-2 p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-            {selectedContentTypes.map(type => (
-              <Button
-                key={type}
-                size="sm"
-                selected={true}
-                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
-                onClick={() => handleContentTypeSelect(type)}
-              >
-                {type}
-              </Button>
-            ))}
-            {searchTerm && (
-              <Button
-                size="sm"
-                selected={true}
-                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
-                onClick={() => setSearchTerm("")}
-              >
-                Search: {searchTerm}
-              </Button>
-            )}
-            {selectedCategory && (
-              <Button
-                size="sm"
-                selected={true}
-                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
-                onClick={() => useAtomStore.getState().setDefaultCategory(null)}
-              >
-                Category: {selectedCategory.name}
-              </Button>
-            )}
-            {selectedCreator && (
-              <Button
-                size="sm"
-                selected={true}
-                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
-                onClick={() => setSelectedCreator(null)}
-              >
-                Creator: {selectedCreator}
-              </Button>
-            )}
-            {selectedTags.map((tag) => (
-              <Button
-                key={tag}
-                size="sm"
-                selected={true}
-                rightIcon={<XIcon className="w-4 h-4 ml-2" />}
-                onClick={() => toggleTag(tag)}
-              >
-                {tag}
-              </Button>
-            ))}
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900/40 via-gray-800/50 to-gray-900/40 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col items-center justify-center w-full min-h-screen bg-white/5 backdrop-blur-sm">
+          <div className="w-full max-w-7xl space-y-6 p-6">
+            <div className="h-12 bg-white/10 backdrop-blur-sm rounded-xl mb-6" />
+            <div className="h-8 bg-white/10 backdrop-blur-sm rounded mb-4 w-1/2" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-64 bg-white/10 backdrop-blur-sm rounded-3xl" />
+              ))}
+            </div>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        <div className="space-y-6">
-          <Routes>
-            <Route path="/" element={
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900/40 via-gray-800/50 to-gray-900/40 relative overflow-hidden">
+      {/* Main content with glassmorphism */}
+      <div className="relative z-10 min-h-screen bg-white/3 backdrop-blur-sm">
+        <main className="flex flex-col items-center w-full min-h-screen">
+          <div className="w-full max-w-7xl space-y-6 p-6">
+            <AddAndNavigationByAnima
+              onViewChange={() => {}} 
+              searchTerm={searchTerm}
+              onSearchChange={(value) => setSearchTerm(value)}
+              selectedContentTypes={selectedContentTypes}
+              onContentTypeSelect={handleContentTypeSelect}
+              selectedCreator={selectedCreator}
+              onCreatorSelect={setSelectedCreator}
+            />
+
+            {hasFilters && (
+              <div className="flex flex-wrap gap-2 p-4 bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-2xl">
+                {selectedContentTypes.map(type => (
+                  <Button
+                    key={type}
+                    size="sm"
+                    selected={true}
+                    rightIcon={<XIcon className="w-4 h-4" />}
+                    onClick={() => handleContentTypeSelect(type)}
+                  >
+                    {type}
+                  </Button>
+                ))}
+                {searchTerm && (
+                  <Button
+                    size="sm"
+                    selected={true}
+                    rightIcon={<XIcon className="w-4 h-4" />}
+                    onClick={() => setSearchTerm("")}
+                  >
+                    Search: {searchTerm}
+                  </Button>
+                )}
+                {selectedCategory && (
+                  <Button
+                    size="sm"
+                    selected={true}
+                    rightIcon={<XIcon className="w-4 h-4" />}
+                    onClick={() => useAtomStore.getState().setDefaultCategory(null)}
+                  >
+                    Category: {selectedCategory.name}
+                  </Button>
+                )}
+                {selectedCreator && (
+                  <Button
+                    size="sm"
+                    selected={true}
+                    rightIcon={<XIcon className="w-4 h-4" />}
+                    onClick={() => setSelectedCreator(null)}
+                  >
+                    Creator: {selectedCreator}
+                  </Button>
+                )}
+                {selectedTags.map((tag) => (
+                  <Button
+                    key={tag}
+                    size="sm"
+                    selected={true}
+                    rightIcon={<XIcon className="w-4 h-4" />}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-6">
               <GallerySection 
                 searchTerm={searchTerm}
                 selectedContentTypes={selectedContentTypes}
                 selectedCreator={selectedCreator}
               />
-            } />
-            <Route path="/detail/:id" element={
-              <DetailView 
-                open={true}
-                onClose={() => navigate('/', { replace: true })}
-                filteredAtoms={atoms}
-              />
-            } />
-          </Routes>
-        </div>
-      </div>
+            </div>
+          </div>
+        </main>
 
-      <div className="fixed bottom-6 right-6 flex flex-col gap-2 items-center">
-        <button
-          onClick={() => setIsOrganizeOpen(true)}
-          className="w-14 h-14 bg-white hover:bg-gray-50 text-black rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
-        >
-          <FolderIcon className="w-6 h-6" />
-        </button>
-        <button
-          onClick={() => setIsAddOpen(true)}
-          className="w-14 h-14 bg-white hover:bg-gray-50 text-black rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
-        >
-          <PlusIcon className="w-6 h-6" />
-        </button>
-      </div>
 
-      <Add open={isAddOpen} onClose={() => setIsAddOpen(false)} />
-      <Organize 
-        open={isOrganizeOpen} 
-        onClose={() => setIsOrganizeOpen(false)} 
-        onCreatorSelect={setSelectedCreator}
-      />
-    </main>
+
+        <Add open={isAddOpen} onClose={() => setIsAddOpen(false)} />
+        <Organize 
+          open={isOrganizeOpen} 
+          onClose={() => setIsOrganizeOpen(false)} 
+          onCreatorSelect={setSelectedCreator}
+        />
+      </div>
+    </div>
   );
 };

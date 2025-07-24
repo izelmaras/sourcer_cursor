@@ -27,13 +27,13 @@ export const RichTextEditor = ({ value, onChange, placeholder = 'Write something
   return (
     <div
       className={cn(
-        'min-h-[120px] rounded-[12px] border border-gray-200 bg-white text-base text-gray-900 px-5 py-3 focus-within:outline-none focus-within:ring-2 focus-within:ring-gray-900 transition-colors duration-200',
+        'min-h-[120px] rounded-[12px] border border-white/10 bg-white/5 backdrop-blur-sm text-base text-white px-5 py-3 focus-within:outline-none focus-within:ring-2 focus-within:ring-white/20 transition-colors duration-200',
         className
       )}
     >
       <EditorContent 
         editor={editor} 
-        className="w-full min-h-[80px] outline-none bg-transparent text-base text-gray-900 focus:outline-none"
+        className="w-full min-h-[80px] outline-none bg-transparent text-base text-white focus:outline-none"
         style={{ margin: 0, padding: 0 }}
       />
       <style>{`

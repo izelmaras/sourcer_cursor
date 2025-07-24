@@ -23,6 +23,16 @@ export const LiveLinkPreview: React.FC<LiveLinkPreviewProps> = ({ url, children,
     setLoading(true);
     setError(false);
     setOgData(null);
+    
+    // Skip API call in development to prevent proxy errors
+    // The API will work in production on Vercel
+    if (import.meta.env.DEV) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
+    
+    // Use real API (production only)
     fetch('/api/og-preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -39,6 +49,7 @@ export const LiveLinkPreview: React.FC<LiveLinkPreviewProps> = ({ url, children,
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    
     return () => {
       cancelled = true;
     };

@@ -64,119 +64,121 @@ export const ContentFields = ({
     setMaterials(newMaterials);
   };
 
-  if (type === 'location') {
+  // List of types that support a source link
+  const typesWithSourceLink = [
+    "video", "audio", "image", "recipe", "location", "link", "website", "youtube", "pdf", "movie", "podcast"
+  ];
+
+  if (typesWithSourceLink.includes(type)) {
     return (
       <div className="space-y-4">
         <Input
-          placeholder="Address"
-          value={locationAddress}
-          onChange={(e) => setLocationAddress(e.target.value)}
-          className={className}
+          placeholder="Direct media URL (e.g., .jpg, .png, .mp4)"
+          value={sourceLink}
+          onChange={(e) => setSourceLink(e.target.value)}
+          inputSize="lg"
+          color="glass"
         />
-        <Input
-          type="number"
-          placeholder="Latitude"
-          value={locationLatitude || ''}
-          onChange={(e) => setLocationLatitude(parseFloat(e.target.value) || null)}
-          className={className}
-        />
-        <Input
-          type="number"
-          placeholder="Longitude"
-          value={locationLongitude || ''}
-          onChange={(e) => setLocationLongitude(parseFloat(e.target.value) || null)}
-          className={className}
-        />
-      </div>
-    );
-  }
-
-  if (type === 'recipe') {
-    return (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-700">Steps</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddStep}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <PlusIcon className="h-4 w-4" />
-              <span className="ml-2">Add step</span>
-            </Button>
-          </div>
-          {steps.map((step, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                value={step}
-                onChange={(e) => handleUpdateStep(index, e.target.value)}
-                placeholder={`Step ${index + 1}`}
-                className={className}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveStep(index)}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <MinusIcon className="h-4 w-4" />
-              </Button>
+        {/* Additional fields for recipe */}
+        {type === 'recipe' && (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-white/80">Steps</h3>
+                <Button
+                  size="sm"
+                  onClick={handleAddStep}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  <span className="ml-2">Add step</span>
+                </Button>
+              </div>
+              {steps.map((step, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={step}
+                    onChange={(e) => handleUpdateStep(index, e.target.value)}
+                    placeholder={`Step ${index + 1}`}
+                    inputSize="lg"
+                    color="glass"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => handleRemoveStep(index)}
+                  >
+                    <MinusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-700">Materials</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddMaterial}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <PlusIcon className="h-4 w-4" />
-              <span className="ml-2">Add material</span>
-            </Button>
-          </div>
-          {materials.map((material, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                value={material.material}
-                onChange={(e) => handleUpdateMaterial(index, 'material', e.target.value)}
-                placeholder="Material"
-                className={className}
-              />
-              <Input
-                value={material.amount}
-                onChange={(e) => handleUpdateMaterial(index, 'amount', e.target.value)}
-                placeholder="Amount"
-                className={className}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveMaterial(index)}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <MinusIcon className="h-4 w-4" />
-              </Button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-white/80">Materials</h3>
+                <Button
+                  size="sm"
+                  onClick={handleAddMaterial}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  <span className="ml-2">Add material</span>
+                </Button>
+              </div>
+              {materials.map((material, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={material.material}
+                    onChange={(e) => handleUpdateMaterial(index, 'material', e.target.value)}
+                    placeholder="Material"
+                    inputSize="lg"
+                    color="glass"
+                  />
+                  <Input
+                    value={material.amount}
+                    onChange={(e) => handleUpdateMaterial(index, 'amount', e.target.value)}
+                    placeholder="Amount"
+                    inputSize="lg"
+                    color="glass"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => handleRemoveMaterial(index)}
+                  >
+                    <MinusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
+        {/* Additional fields for location */}
+        {type === 'location' && (
+          <div className="space-y-4">
+            <Input
+              placeholder="Address"
+              value={locationAddress}
+              onChange={(e) => setLocationAddress(e.target.value)}
+              color="glass"
+              inputSize="lg"
+            />
+            <Input
+              type="number"
+              placeholder="Latitude"
+              value={locationLatitude || ''}
+              onChange={(e) => setLocationLatitude(parseFloat(e.target.value) || null)}
+              color="glass"
+              inputSize="lg"
+            />
+            <Input
+              type="number"
+              placeholder="Longitude"
+              value={locationLongitude || ''}
+              onChange={(e) => setLocationLongitude(parseFloat(e.target.value) || null)}
+              color="glass"
+              inputSize="lg"
+            />
+          </div>
+        )}
       </div>
-    );
-  }
-
-  if (['video', 'audio', 'image'].includes(type)) {
-    return (
-      <Input
-        placeholder="Source link (direct media URL, e.g., .jpg, .png, .mp4)"
-        value={sourceLink}
-        onChange={(e) => setSourceLink(e.target.value)}
-        className={`bg-gray-50 text-gray-900 ${className}`}
-      />
     );
   }
 

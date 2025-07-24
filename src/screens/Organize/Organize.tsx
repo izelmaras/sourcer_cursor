@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { useAtomStore } from "../../store/atoms";
@@ -13,7 +14,7 @@ import type { Database } from '../../types/supabase';
 interface OrganizeProps {
   open: boolean;
   onClose: () => void;
-  initialType?: 'Categories' | 'Tags' | 'Creators';
+  initialType?: 'Categories' | 'Tags' | 'TagsByCategories' | 'Creators';
   onCreatorSelect?: (creator: string) => void;
 }
 
@@ -25,6 +26,7 @@ type Creator = Database['public']['Tables']['creators']['Row'];
 enum OrganizeType {
   Categories = 'Categories',
   Tags = 'Tags',
+  TagsByCategories = 'TagsByCategories',
   Creators = 'Creators',
 }
 
@@ -48,6 +50,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     fetchTags,
     fetchCreators,
     fetchCreatorTags,
+    fetchCategoryTags,
     addCategory,
     addTag,
     addCreator,
@@ -72,7 +75,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
   } = useAtomStore();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<'Categories' | 'Tags' | 'Creators'>(initialType);
+  const [selectedType, setSelectedType] = useState<'Categories' | 'Tags' | 'TagsByCategories' | 'Creators'>(initialType);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingLinks, setEditingLinks] = useState<{link1: string; link2: string; link3: string}>({
@@ -91,6 +94,13 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
   const [mergeSourceId, setMergeSourceId] = useState<number | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
   const [mergeSearch, setMergeSearch] = useState('');
+  const [contextMenu, setContextMenu] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+    tagId: number;
+    tagName: string;
+  } | null>(null);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -98,12 +108,13 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
         fetchCategories(),
         fetchTags(),
         fetchCreators(),
-        fetchCreatorTags()
+        fetchCreatorTags(),
+        fetchCategoryTags()
       ]);
     };
     
     initializeData();
-  }, [fetchCategories, fetchTags, fetchCreators, fetchCreatorTags]);
+  }, [fetchCategories, fetchTags, fetchCreators, fetchCreatorTags, fetchCategoryTags]);
 
   useEffect(() => {
     setSelectedType(initialType);
@@ -116,6 +127,8 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
           return categories;
         case 'Tags':
           return tags;
+        case 'TagsByCategories':
+          return tags; // We'll handle this differently in the render
         case 'Creators':
           return creators;
         default:
@@ -124,6 +137,35 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     })();
 
     return [...items].sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const getTagsByCategories = () => {
+    // Get all tags that are assigned to any category
+    const categorizedTagIds = new Set();
+    categories.forEach(category => {
+      const categoryTags = getCategoryTags(category.id);
+      categoryTags.forEach(tag => categorizedTagIds.add(tag.id));
+    });
+    
+    // Uncategorized tags are those not assigned to any category
+    const uncategorizedTags = tags.filter(tag => !categorizedTagIds.has(tag.id));
+    
+    // Categorized tags grouped by their categories
+    const categorizedTags = categories.map(category => ({
+      category,
+      tags: getCategoryTags(category.id)
+    })).filter(group => group.tags.length > 0);
+    
+    // Debug logging - REMOVED FOR PERFORMANCE
+    // console.log('Total tags:', tags.length);
+    // console.log('Categorized tag IDs:', Array.from(categorizedTagIds));
+    // console.log('Uncategorized tags:', uncategorizedTags.map(t => t.name));
+    // console.log('Categorized tags by category:', categorizedTags.map(ct => ({
+    //   category: ct.category.name,
+    //   tags: ct.tags.map(t => t.name)
+    // })));
+    
+    return { uncategorizedTags, categorizedTags };
   };
 
   const handleAdd = async () => {
@@ -331,6 +373,32 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     setMergeSearch('');
   };
 
+  const handleTagContextMenu = (e: React.MouseEvent, tagId: number, tagName: string) => {
+    e.preventDefault();
+    setContextMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      tagId,
+      tagName
+    });
+  };
+
+  const handleAssignTagToCategory = async (tagId: number, categoryId: number) => {
+    try {
+      await assignTagToCategory(categoryId, tagId);
+      setContextMenu(null);
+      // Refresh the data to show the updated categorization
+      await Promise.all([fetchTags(), fetchCategoryTags()]);
+    } catch (error) {
+      console.error('Failed to assign tag to category:', error);
+    }
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
   const filteredItems = getItems().filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -346,8 +414,8 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     !tags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) &&
     !selectedTags.includes(tagSearch);
 
-  const buttonStyle = "bg-gray-100 text-gray-900 border border-gray-900 shadow-sm hover:bg-gray-200";
-  const inputStyle = "bg-white text-gray-900 border border-gray-900 focus:ring-2 focus:ring-gray-900";
+  const buttonStyle = "bg-white/5 backdrop-blur-sm text-white border border-white/10 shadow-sm hover:bg-white/8";
+  const inputStyle = "bg-white/5 backdrop-blur-sm text-white border border-white/10 focus:ring-2 focus:ring-white/20";
 
   // --- ORGANIZE LIST ITEM COMPONENT ---
   interface OrganizeListItemProps {
@@ -383,7 +451,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
               value={editingName} 
               onChange={e => setEditingName(e.target.value)} 
               placeholder="Name" 
-              color="light"
+              color="glass"
               inputSize="lg"
             />
             {selectedType === OrganizeType.Creators && (
@@ -392,21 +460,21 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                   value={editingLinks.link1} 
                   onChange={e => setEditingLinks({ ...editingLinks, link1: e.target.value })} 
                   placeholder="Link 1" 
-                  color="light"
+                  color="glass"
                   inputSize="lg"
                 />
                 <Input 
                   value={editingLinks.link2} 
                   onChange={e => setEditingLinks({ ...editingLinks, link2: e.target.value })} 
                   placeholder="Link 2" 
-                  color="light"
+                  color="glass"
                   inputSize="lg"
                 />
                 <Input 
                   value={editingLinks.link3} 
                   onChange={e => setEditingLinks({ ...editingLinks, link3: e.target.value })} 
                   placeholder="Link 3" 
-                  color="light"
+                  color="glass"
                   inputSize="lg"
                 />
               </>
@@ -421,26 +489,42 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     }
 
     return (
-      <div className="flex-grow text-left cursor-pointer hover:text-gray-600" onClick={onItemClick}>
+      <div className="flex-grow text-left cursor-pointer hover:text-white/80" onClick={onItemClick}>
         <div className="flex items-center gap-2">
-          <span className="text-gray-900">{item.name}</span>
-          {selectedType === OrganizeType.Categories && isDefaultCategory && <StarIcon className="h-4 w-4 text-yellow-500" />}
+          <span className="text-white">{item.name}</span>
+          {selectedType === OrganizeType.Categories && isDefaultCategory && <StarIcon className="h-4 w-4 text-yellow-400" />}
           {((selectedType === OrganizeType.Categories || selectedType === OrganizeType.Creators) && 'count' in item && typeof item.count === 'number') && (
-            <span className="text-gray-500 text-sm">({item.count || 0} instances)</span>
+            <span className="text-white/60 text-sm">({item.count || 0} instances)</span>
           )}
         </div>
         {selectedType === OrganizeType.Creators && (
-          <div className="flex flex-wrap gap-2 mt-1">
-            {'link_1' in item && item.link_1 && (
-              <a href={item.link_1} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"><LinkIcon className="h-3 w-3" />Link 1</a>
-            )}
-            {'link_2' in item && item.link_2 && (
-              <a href={item.link_2} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"><LinkIcon className="h-3 w-3" />Link 2</a>
-            )}
-            {'link_3' in item && item.link_3 && (
-              <a href={item.link_3} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"><LinkIcon className="h-3 w-3" />Link 3</a>
-            )}
-          </div>
+          <>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {'link_1' in item && item.link_1 && (
+                <a href={item.link_1} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-white/70 hover:text-white"><LinkIcon className="h-3 w-3" />Link 1</a>
+              )}
+              {'link_2' in item && item.link_2 && (
+                <a href={item.link_2} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-white/70 hover:text-white"><LinkIcon className="h-3 w-3" />Link 2</a>
+              )}
+              {'link_3' in item && item.link_3 && (
+                <a href={item.link_3} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-white/70 hover:text-white"><LinkIcon className="h-3 w-3" />Link 3</a>
+              )}
+            </div>
+            {/* Show tags under creator links */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {getCreatorTags(item.id).map(tag => (
+                <button
+                  key={tag.id}
+                  className="px-2 py-1 rounded bg-white/10 text-white text-xs hover:bg-white/20 transition-colors border border-white/10 max-w-32 truncate"
+                  onClick={e => { e.stopPropagation(); toggleTag(tag.name); }}
+                  type="button"
+                  title={tag.name}
+                >
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
     );
@@ -450,12 +534,12 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     <Dialog.Root open={open} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl px-4 sm:px-6 outline-none max-h-[80vh]">
-          <ScrollArea className="max-h-[80vh] overflow-y-auto">
-            <ModalWrapper className="max-h-[80vh] h-auto flex flex-col">
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl px-2 sm:px-6 outline-none max-h-[90vh] sm:max-h-[80vh]">
+                      <ScrollArea className="max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
+              <ModalWrapper className="max-h-[90vh] sm:max-h-[80vh] h-auto flex flex-col">
               <ModalHeader className="flex-none pb-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1 sm:gap-2">
                     <Button
                       size="sm"
                       selected={selectedType === 'Categories'}
@@ -472,19 +556,28 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                     </Button>
                     <Button
                       size="sm"
+                      selected={selectedType === 'TagsByCategories'}
+                      onClick={() => setSelectedType('TagsByCategories')}
+                    >
+                      Tags by Categories
+                    </Button>
+                    <Button
+                      size="sm"
                       selected={selectedType === 'Creators'}
                       onClick={() => setSelectedType('Creators')}
                     >
                       Creators
                     </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    leftIcon={<PlusIcon className="h-4 w-4 mr-2" />}
-                    onClick={() => setIsAddDialogOpen(true)}
-                  >
-                    Add {selectedType === 'Categories' ? 'category' : selectedType.slice(0, -1).toLowerCase()}
-                  </Button>
+                  {selectedType !== 'TagsByCategories' && (
+                    <Button
+                      size="sm"
+                      leftIcon={<PlusIcon className="h-4 w-4 mr-2" />}
+                      onClick={() => setIsAddDialogOpen(true)}
+                    >
+                      Add {selectedType === 'Categories' ? 'category' : selectedType.slice(0, -1).toLowerCase()}
+                    </Button>
+                  )}
                 </div>
               </ModalHeader>
               <ModalBody className="flex-1">
@@ -493,18 +586,18 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                     placeholder={`Search ${selectedType.toLowerCase()}`}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className={inputStyle}
+                    color="light"
                   />
                   {isAddDialogOpen && (
-                    <div className="bg-gray-50 rounded-lg p-4 mb-2 flex flex-col gap-2">
-                      <div className="text-base font-medium text-gray-900 mb-2">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-2 flex flex-col gap-2 border border-white/20">
+                      <div className="text-base font-medium text-white mb-2">
                         {selectedType === 'Categories' ? 'Add Category' : selectedType === 'Tags' ? 'Add Tag' : 'Add Creator'}
                       </div>
                       <Input
                         placeholder="Name"
                         value={newItemName}
                         onChange={(e) => setNewItemName(e.target.value)}
-                        color="light"
+                        color="glass"
                         inputSize="lg"
                       />
                       {selectedType === 'Categories' && (
@@ -512,7 +605,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                           placeholder="Description"
                           value={newItemDescription}
                           onChange={(e) => setNewItemDescription(e.target.value)}
-                          color="light"
+                          color="glass"
                           inputSize="lg"
                         />
                       )}
@@ -523,12 +616,80 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                     </div>
                   )}
                   <div className="flex-1">
-                    {filteredItems.map((item) => (
+                    {selectedType === 'TagsByCategories' ? (
+                      // Special rendering for Tags by Categories
+                      (() => {
+                        const { uncategorizedTags, categorizedTags } = getTagsByCategories();
+                        return (
+                          <div className="space-y-4">
+                            {/* Uncategorized Tags */}
+                            {uncategorizedTags.length > 0 && (
+                              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                                <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                                  <span className="text-yellow-400">📁</span>
+                                  Uncategorized Tags
+                                  <span className="text-sm text-white/60">({uncategorizedTags.length})</span>
+                                </h3>
+                                <div className="flex flex-wrap gap-2">
+                                  {uncategorizedTags.map((tag) => (
+                                    <button
+                                      key={tag.id}
+                                      className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 transition-colors border border-white/20"
+                                      onClick={() => toggleTag(tag.name)}
+                                      onContextMenu={(e) => handleTagContextMenu(e, tag.id, tag.name)}
+                                      title={`${tag.name} - Right click to assign to category`}
+                                    >
+                                      {tag.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Categorized Tags */}
+                            {categorizedTags.map(({ category, tags }) => (
+                              <div key={category.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                                <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                                  <span className="text-blue-400">📂</span>
+                                  {category.name}
+                                  {category.is_private && <LockIcon className="h-4 w-4 text-white/60" />}
+                                  <span className="text-sm text-white/60">({tags.length})</span>
+                                </h3>
+                                {category.description && (
+                                  <p className="text-white/60 text-sm mb-3">{category.description}</p>
+                                )}
+                                <div className="flex flex-wrap gap-2">
+                                  {tags.map((tag) => (
+                                    <button
+                                      key={tag.id}
+                                      className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 transition-colors border border-white/20"
+                                      onClick={() => toggleTag(tag.name)}
+                                      title={tag.name}
+                                    >
+                                      {tag.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                            
+                            {/* Empty state */}
+                            {uncategorizedTags.length === 0 && categorizedTags.length === 0 && (
+                              <div className="text-center text-white/60 py-8">
+                                <p>No tags found. Create some tags first!</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      // Regular rendering for other types
+                      filteredItems.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-gray-50 rounded-lg p-4 mb-2 last:mb-0"
+                        className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-2 last:mb-0 border border-white/20"
                       >
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <OrganizeListItem
                             item={item}
                             selectedType={selectedType as OrganizeType}
@@ -558,18 +719,20 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                             setEditingLinks={setEditingLinks}
                           />
                           {editingId !== item.id && (
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2 justify-end sm:justify-start">
                               {(isCategory(item) || isTag(item)) && (
                                 <Button
                                   size="sm"
                                   leftIcon={item.is_private ? <LockIcon className="h-4 w-4" /> : <UnlockIcon className="h-4 w-4" />}
                                   onClick={() => handleTogglePrivate(item.id, !!item.is_private)}
+                                  className="flex-shrink-0"
                                 />
                               )}
                               <Button
                                 size="sm"
                                 leftIcon={<PlusIcon className="h-4 w-4" />}
                                 onClick={() => handleOpenSetTags(item.id)}
+                                className="flex-shrink-0"
                               >
                                 Tags
                               </Button>
@@ -577,6 +740,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                 size="sm"
                                 leftIcon={<PencilIcon className="h-4 w-4" />}
                                 onClick={() => handleEdit(item.id, item.name, item)}
+                                className="flex-shrink-0"
                               />
                               <Button
                                 size="sm"
@@ -586,26 +750,29 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                   setMergeTargetId(null);
                                   setMergeSearch('');
                                 }}
+                                className="flex-shrink-0"
                               />
                               <Button
                                 size="sm"
                                 leftIcon={<TrashIcon className="h-4 w-4" />}
                                 onClick={() => handleDelete(item.id)}
+                                className="flex-shrink-0"
                               />
                             </div>
                           )}
                         </div>
                         {mergeSourceId === item.id && (
-                          <div className="mt-4 flex flex-col gap-2 bg-gray-100 rounded p-3">
-                            <Input
-                              placeholder={`Search target ${selectedType.toLowerCase()}`}
-                              value={mergeSearch}
-                              onChange={e => {
-                                setMergeSearch(e.target.value);
-                                setMergeTargetId(null);
-                              }}
-                              className="w-full"
-                            />
+                          <div className="mt-4 flex flex-col gap-2 bg-white/10 backdrop-blur-sm rounded p-3 border border-white/20">
+                                                          <Input
+                                placeholder={`Search target ${selectedType.toLowerCase()}`}
+                                value={mergeSearch}
+                                onChange={e => {
+                                  setMergeSearch(e.target.value);
+                                  setMergeTargetId(null);
+                                }}
+                                color="glass"
+                                className="w-full"
+                              />
                             <div className="max-h-32 overflow-y-auto">
                               {getItems()
                                 .filter(target =>
@@ -616,7 +783,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                 .map(target => (
                                   <div
                                     key={target.id}
-                                    className={`px-2 py-1 rounded cursor-pointer ${mergeTargetId === target.id ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
+                                    className={`px-2 py-1 rounded cursor-pointer ${mergeTargetId === target.id ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/80'}`}
                                     onClick={() => setMergeTargetId(target.id)}
                                   >
                                     {target.name}
@@ -645,45 +812,49 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                   }
                                 }
                               }}
-                              color="light"
+                              color="glass"
                               inputSize="lg"
                             />
 
                             {selectedTags.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-1.5">
                                 {selectedTags.map((tag) => (
                                   <Button
                                     key={tag}
                                     size="sm"
-                                    rightIcon={<XIcon className="h-4 w-4 ml-2" />}
+                                    rightIcon={<XIcon className="h-4 w-4 ml-1" />}
                                     onClick={() => handleRemoveTag(tag)}
                                     tabIndex={-1}
+                                    className="max-w-40 truncate"
+                                    title={tag}
                                   >
-                                    {tag}
+                                    <span className="truncate">{tag}</span>
                                   </Button>
                                 ))}
                               </div>
                             )}
 
                             {(tagSearch || showCreateTag) && (
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
                                 {filteredTags.map((tag) => (
                                   <Button
                                     key={tag.id}
                                     size="sm"
-                                    className={`justify-start h-8 px-3 ${buttonStyle}`}
+                                    className={`justify-start h-8 px-3 ${buttonStyle} max-w-full`}
                                     onClick={() => handleTagClick(tag.name)}
+                                    title={tag.name}
                                   >
-                                    {tag.name}
+                                    <span className="truncate text-left">{tag.name}</span>
                                   </Button>
                                 ))}
                                 {showCreateTag && (
                                   <Button
                                     size="sm"
-                                    className={`justify-start h-8 px-3 ${buttonStyle}`}
+                                    className={`justify-start h-8 px-3 ${buttonStyle} max-w-full`}
                                     onClick={handleCreateTag}
+                                    title={`Create "${tagSearch}"`}
                                   >
-                                    Create "{tagSearch}"
+                                    <span className="truncate text-left">Create "{tagSearch}"</span>
                                   </Button>
                                 )}
                               </div>
@@ -700,8 +871,9 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  )}
+                </div>
                 </div>
               </ModalBody>
             </ModalWrapper>
@@ -713,21 +885,95 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
           <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg px-4 sm:px-6 outline-none">
-            <ModalWrapper>
-              <ModalHeader>Delete {selectedType.slice(0, -1)}</ModalHeader>
-              <ModalBody>
-                <p className="text-gray-600">
-                  Are you sure you want to delete this {selectedType.toLowerCase()}? This action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button size="sm" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-                  <Button size="sm" selected={true} style={{borderColor: 'red', color: 'red'}} onClick={confirmDelete}>Delete</Button>
-                </div>
-              </ModalBody>
-            </ModalWrapper>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white">Delete {selectedType.slice(0, -1)}</h2>
+                <button
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="text-white/60 hover:text-white transition-colors"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="text-white/80 mb-6">
+                Are you sure you want to delete this {selectedType.toLowerCase()}? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button 
+                  size="sm" 
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={confirmDelete}
+                  className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border-red-400/30 hover:border-red-400/50"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      {/* Context Menu for Tag Assignment - Rendered via Portal */}
+      {contextMenu && createPortal(
+        <>
+          <div 
+            className="fixed z-[9999] bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-2xl min-w-48"
+            style={{ 
+              left: contextMenu.x, 
+              top: contextMenu.y,
+              transform: 'translate(-50%, -100%) translateY(-10px)',
+              maxHeight: '300px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-2">
+              <div className="text-white text-sm font-medium px-3 py-2 border-b border-white/20">
+                Assign "{contextMenu.tagName}" to:
+              </div>
+              <div 
+                className="overflow-y-auto custom-scrollbar" 
+                style={{ 
+                  maxHeight: '200px'
+                }}
+              >
+                {categories.length === 0 ? (
+                  <div className="px-3 py-2 text-white/60 text-sm">
+                    No categories available. Create a category first.
+                  </div>
+                ) : (
+                  categories.map((category) => (
+                    <button
+                      key={category.id}
+                      className="w-full text-left px-3 py-2 text-white text-sm hover:bg-white/20 rounded transition-colors flex items-center gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAssignTagToCategory(contextMenu.tagId, category.id);
+                      }}
+                    >
+                      <span className="text-blue-400">📂</span>
+                      {category.name}
+                      {category.is_private && <LockIcon className="h-4 w-4 text-white/60" />}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Backdrop to close context menu */}
+          <div 
+            className="fixed inset-0 z-[9998]" 
+            onClick={handleCloseContextMenu}
+          />
+        </>,
+        document.body
+      )}
     </Dialog.Root>
   );
 };

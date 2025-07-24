@@ -6,6 +6,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   base: "/",
+  server: {
+    // Remove problematic proxy that causes connection errors
+    // The og-preview API will be handled by Vercel in production
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -18,7 +22,7 @@ export default defineConfig({
   },
   css: {
     postcss: {
-      plugins: [tailwind()],
+      plugins: [tailwind],
     },
   },
 });

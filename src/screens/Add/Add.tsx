@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ScrollArea } from "../../components/ui/scroll-area";
@@ -52,6 +52,8 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
     fetchCreators();
   }, [fetchTags, fetchCreators]);
 
+
+
   const contentTypes: ContentType[] = [
     { icon: <NewspaperIcon className="h-4 w-4" />, label: "Article/blog", type: "article" },
     { icon: <AudioIcon className="h-4 w-4" />, label: "Audio", type: "audio" },
@@ -74,6 +76,13 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
     { icon: <VideoIcon className="h-4 w-4" />, label: "Video", type: "video" },
     { icon: <LinkIcon className="h-4 w-4" />, label: "Website", type: "website" },
     { icon: <PlayCircleIcon className="h-4 w-4" />, label: "YouTube", type: "youtube" },
+  ];
+
+  const orderedTypes = [
+    ...contentTypes.filter(t => t.type === "image"),
+    ...contentTypes.filter(t => t.type === "link"),
+    ...contentTypes.filter(t => t.type === "youtube"),
+    ...contentTypes.filter(t => !["image", "link", "youtube"].includes(t.type)).sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   const handleSave = async () => {
@@ -213,160 +222,32 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
           <ModalWrapper>
             <ScrollArea className="max-h-[calc(80vh-0rem)] overflow-y-auto">
               <div className="p-6 space-y-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3">
-                  {contentTypes.map((type) => (
-                    <Button
-                      key={type.type}
-                      size="lg"
-                      selected={selectedType === type.type}
-                      leftIcon={type.icon}
-                      onClick={() => setSelectedType(type.type)}
-                      className="w-full"
-                    >
-                      {type.label}
-                    </Button>
-                  ))}
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-white/80">Content type</label>
+                    <div className="flex flex-wrap gap-2">
+                      {orderedTypes.map(type => (
+                        <button
+                          key={type.type}
+                          type="button"
+                          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                            selectedType === type.type
+                              ? 'bg-white/20 text-white border border-white/30 shadow-lg scale-105'
+                              : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:scale-102'
+                          }`}
+                          onClick={() => setSelectedType(type.type)}
+                        >
+                          {type.icon}
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="space-y-4">
-                    <Input
-                      placeholder="Add tag"
-                      value={tagSearch}
-                      onChange={(e) => setTagSearch(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (filteredTags.length > 0) {
-                            handleTagClick(filteredTags[0].name);
-                          } else if (showCreateTag) {
-                            handleCreateTag();
-                          }
-                        }
-                      }}
-                      className={colors.button.secondary}
-                    />
-
-                    {selectedTags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {selectedTags.map((tag) => (
-                          <Button
-                            key={tag}
-                            size="lg"
-                            rightIcon={<XIcon className="h-4 w-4 ml-2" />}
-                            onClick={() => removeTag(tag)}
-                            tabIndex={-1}
-                          >
-                            {tag}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-
-                    {(tagSearch || showCreateTag) && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        {filteredTags.map((tag) => (
-                          <Button
-                            key={tag.id}
-                            size="lg"
-                            onClick={() => handleTagClick(tag.name)}
-                          >
-                            {tag.name}
-                          </Button>
-                        ))}
-                        {showCreateTag && (
-                          <Button
-                            size="lg"
-                            onClick={handleCreateTag}
-                          >
-                            Create "{tagSearch}"
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <Input
-                      placeholder="Add creator"
-                      value={creatorSearch}
-                      onChange={(e) => setCreatorSearch(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (filteredCreators.length > 0) {
-                            handleCreatorClick(filteredCreators[0].name);
-                          } else if (showCreateCreator) {
-                            handleCreateCreator();
-                          }
-                        }
-                      }}
-                      className={colors.button.secondary}
-                    />
-
-                    {selectedCreators.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {selectedCreators.map((creator) => (
-                          <Button
-                            key={creator}
-                            size="lg"
-                            rightIcon={<XIcon className="h-4 w-4 ml-2" />}
-                            onClick={() => removeCreator(creator)}
-                            tabIndex={-1}
-                          >
-                            {creator}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-
-                    {(creatorSearch || showCreateCreator) && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        {filteredCreators.map((creator) => (
-                          <Button
-                            key={creator.id}
-                            size="lg"
-                            onClick={() => handleCreatorClick(creator.name)}
-                          >
-                            {creator.name}
-                          </Button>
-                        ))}
-                        {showCreateCreator && (
-                          <Button
-                            size="lg"
-                            onClick={handleCreateCreator}
-                          >
-                            Create "{creatorSearch}"
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <Input
-                    placeholder="External link (webpage URL)"
-                    value={externalLink}
-                    onChange={(e) => setExternalLink(e.target.value)}
-                    className={colors.button.secondary}
-                  />
-
-                  <div className="space-y-4">
-                    <Input
-                      placeholder="Title (optional)"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className={colors.button.secondary}
-                    />
-
-                    <div className="space-y-2">
-                      <RichTextEditor
-                        value={description}
-                        onChange={setDescription}
-                        placeholder="Add a description..."
-                        className={`min-h-[120px] ${colors.button.secondary}`}
-                      />
-                    </div>
-
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/80">Source link</label>
                     <ContentFields
                       type={selectedType}
                       locationAddress={locationAddress}
@@ -385,15 +266,169 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
                     />
                   </div>
 
-                  <div className="flex justify-end pt-4">
-                    <Button
-                      size="lg"
-                      onClick={handleSave}
-                      disabled={!selectedType}
-                    >
-                      Save
-                    </Button>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/80 mt-2">External link</label>
+                    <Input
+                      placeholder="Webpage URL"
+                      value={externalLink}
+                      onChange={(e) => setExternalLink(e.target.value)}
+                      inputSize="lg"
+                      color="glass"
+                    />
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/80 mt-2">Tag(s)</label>
+                    <Input
+                      placeholder="Add tag"
+                      value={tagSearch}
+                      onChange={(e) => setTagSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (filteredTags.length > 0) {
+                            handleTagClick(filteredTags[0].name);
+                          } else if (showCreateTag) {
+                            handleCreateTag();
+                          }
+                        }
+                      }}
+                      inputSize="lg"
+                      color="glass"
+                    />
+
+                    {selectedTags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedTags.map((tag) => (
+                          <Button
+                            key={tag}
+                            size="sm"
+                            rightIcon={<XIcon className="h-4 w-4 ml-2" />}
+                            onClick={() => removeTag(tag)}
+                            tabIndex={-1}
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+
+                    {(tagSearch || showCreateTag) && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {filteredTags.map((tag) => (
+                          <Button
+                            key={tag.id}
+                            size="sm"
+                            onClick={() => handleTagClick(tag.name)}
+                          >
+                            {tag.name}
+                          </Button>
+                        ))}
+                        {showCreateTag && (
+                          <Button
+                            size="sm"
+                            onClick={handleCreateTag}
+                          >
+                            Create "{tagSearch}"
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/80 mt-2">Creator(s)</label>
+                    <Input
+                      placeholder="Add creator"
+                      value={creatorSearch}
+                      onChange={(e) => setCreatorSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (filteredCreators.length > 0) {
+                            handleCreatorClick(filteredCreators[0].name);
+                          } else if (showCreateCreator) {
+                            handleCreateCreator();
+                          }
+                        }
+                      }}
+                      inputSize="lg"
+                      color="glass"
+                    />
+
+                    {selectedCreators.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCreators.map((creator) => (
+                          <Button
+                            key={creator}
+                            size="sm"
+                            rightIcon={<XIcon className="h-4 w-4 ml-2" />}
+                            onClick={() => removeCreator(creator)}
+                            tabIndex={-1}
+                          >
+                            {creator}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+
+                    {(creatorSearch || showCreateCreator) && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {filteredCreators.map((creator) => (
+                          <Button
+                            key={creator.id}
+                            size="sm"
+                            onClick={() => handleCreatorClick(creator.name)}
+                          >
+                            {creator.name}
+                          </Button>
+                        ))}
+                        {showCreateCreator && (
+                          <Button
+                            size="sm"
+                            onClick={handleCreateCreator}
+                          >
+                            Create "{creatorSearch}"
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/80 mt-2">Title</label>
+                    <Input
+                      placeholder="Title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      inputSize="lg"
+                      color="glass"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/80 mt-2">Description</label>
+                    <RichTextEditor
+                      value={description}
+                      onChange={setDescription}
+                      placeholder="Add a description..."
+                      className="h-12 px-5 text-base rounded-[12px] bg-white/5 backdrop-blur-sm text-white border border-white/10 placeholder:text-white/60 focus:ring-2 focus:ring-white/20 focus:border-white/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={!selectedType}
+                  >
+                    Save
+                  </Button>
                 </div>
               </div>
             </ScrollArea>
