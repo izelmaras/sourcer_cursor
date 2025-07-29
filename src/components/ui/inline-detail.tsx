@@ -175,6 +175,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         tags: editTags,
         media_source_link: editSourceUrl,
         link: editExternalLink,
+        content_type: atom.content_type, // Preserve the current content type
       });
       setIsEditing(false);
       onUpdate({ ...atom, title: editTitle, description: editDescription, creator_name: editCreators.join(', '), tags: editTags, media_source_link: editSourceUrl, link: editExternalLink });
@@ -439,7 +440,9 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     <button
                       key={type.type}
                       onClick={() => {
+                        console.log('Content type button clicked:', type.type);
                         const updatedAtom = { ...atom, content_type: type.type };
+                        console.log('Updated atom:', updatedAtom);
                         onUpdate(updatedAtom);
                       }}
                       className={`px-3 py-2 text-sm rounded-md transition-all duration-200 flex items-center gap-2 ${

@@ -186,7 +186,6 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
       setIsFlagged(currentAtom.flag_for_deletion || false);
       setEditSourceUrl(currentAtom.media_source_link || '');
       setEditExternalLink(currentAtom.link || '');
-      setEditType(currentAtom.content_type || 'image');
     }
   }, [currentAtom, forceUpdate]);
 
@@ -350,23 +349,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleExternalLink = () => {
-    console.log('handleExternalLink called');
-    console.log('editExternalLink:', editExternalLink);
-    console.log('currentAtom?.link:', currentAtom?.link);
-    
-    const linkToUse = editExternalLink || currentAtom?.link;
-    console.log('linkToUse:', linkToUse);
-    
-    if (linkToUse) {
-      console.log('Opening external link:', linkToUse);
-      try {
-        window.open(linkToUse, '_blank', 'noopener,noreferrer');
-        console.log('window.open called successfully');
-      } catch (error) {
-        console.error('Error opening link:', error);
-      }
-    } else {
-      console.log('No external link available');
+    if (currentAtom?.link) {
+      window.open(currentAtom.link, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -392,7 +376,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
         tags: editTags,
         media_source_link: editSourceUrl,
         link: editExternalLink,
-        content_type: editType,
+        content_type: editType, // <-- ensure type is updated
       });
       setIsEditing(false);
     } catch (error) {
@@ -445,21 +429,14 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
     if (!currentAtom) return;
 
     try {
-      // Update local state immediately for better UX
-      setEditType(newType);
-      setIsTypeSelectorOpen(false);
-      
-      // Update the database
       await updateAtom(currentAtom.id, {
         content_type: newType
       });
-      
+      setIsTypeSelectorOpen(false);
       // Refresh the atom data
       await fetchAtoms();
     } catch (error) {
       console.error('Error changing content type:', error);
-      // Revert local state on error
-      setEditType(currentAtom.content_type || 'image');
     }
   };
 
@@ -626,19 +603,11 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                       <DownloadIcon className="h-5 w-5" />
                     </IconButton>
                   )}
-                  {(currentAtom?.link || editExternalLink) && (
+                  {currentAtom?.link && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
-                      <button 
-                        onClick={(e) => {
-                          console.log('Link button clicked!');
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleExternalLink();
-                        }} 
-                        className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
-                      >
+                      <IconButton onClick={handleExternalLink} color="light" className="bg-blue-100 hover:bg-blue-200">
                         <LinkIcon className="h-4 w-4 text-blue-600" />
-                      </button>
+                      </IconButton>
                       <span className="text-sm text-blue-700 font-medium">External Link</span>
                     </div>
                   )}
@@ -696,7 +665,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                           onClick={() => setIsTypeSelectorOpen(!isTypeSelectorOpen)}
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-sm transition-all duration-200"
                         >
-                          <span>{contentTypes.find(ct => ct.type === editType)?.label || 'Select Type'}</span>
+                          <span>{contentTypes.find(ct => ct.type === currentAtom?.content_type)?.label || 'Select Type'}</span>
                           <ChevronDownIcon className="h-4 w-4" />
                         </button>
                         {isTypeSelectorOpen && (
@@ -707,7 +676,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                                   key={ct.type}
                                   onClick={() => handleTypeChange(ct.type)}
                                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                                    editType === ct.type
+                                    currentAtom?.content_type === ct.type
                                       ? 'bg-blue-50 text-blue-700'
                                       : 'text-gray-700 hover:bg-gray-50'
                                   }`}

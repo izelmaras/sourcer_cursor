@@ -31,7 +31,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
   selectedCreator?: string | null
 }) => {
   const navigate = useNavigate();
-  const { deletingIds } = useAtomStore();
+  const { deletingIds, updateAtom, fetchAtoms } = useAtomStore();
   const [visibleCount, setVisibleCount] = useState(12);
   const lastFilterRef = useRef<string>("");
   const [expandedAtomId, setExpandedAtomId] = useState<number | null>(null);
@@ -155,12 +155,18 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     setExpandedAtomId(newAtom.id);
   };
 
-  const handleUpdateAtom = (updatedAtom: Atom) => {
-    // Update the atom in the list
-    const updatedAtoms = atoms.map(atom => 
-      atom.id === updatedAtom.id ? updatedAtom : atom
-    );
-    // You might want to update the store here as well
+  const handleUpdateAtom = async (updatedAtom: Atom) => {
+    console.log('handleUpdateAtom called with:', updatedAtom);
+    try {
+      // Update the atom in the database
+      await updateAtom(updatedAtom.id, updatedAtom);
+      console.log('Database update successful');
+      // Refresh the atoms list to get the latest data
+      await fetchAtoms();
+      console.log('Atoms refreshed');
+    } catch (error) {
+      console.error('Error updating atom:', error);
+    }
   };
 
   const handleDeleteAtom = (atomId: number) => {
