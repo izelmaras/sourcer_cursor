@@ -440,9 +440,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     <button
                       key={type.type}
                       onClick={() => {
-                        console.log('Content type button clicked:', type.type);
                         const updatedAtom = { ...atom, content_type: type.type };
-                        console.log('Updated atom:', updatedAtom);
                         onUpdate(updatedAtom);
                       }}
                       className={`px-3 py-2 text-sm rounded-md transition-all duration-200 flex items-center gap-2 ${

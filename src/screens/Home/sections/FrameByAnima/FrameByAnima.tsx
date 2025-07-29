@@ -156,14 +156,11 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
   };
 
   const handleUpdateAtom = async (updatedAtom: Atom) => {
-    console.log('handleUpdateAtom called with:', updatedAtom);
     try {
       // Update the atom in the database
       await updateAtom(updatedAtom.id, updatedAtom);
-      console.log('Database update successful');
       // Refresh the atoms list to get the latest data
       await fetchAtoms();
-      console.log('Atoms refreshed');
     } catch (error) {
       console.error('Error updating atom:', error);
     }
