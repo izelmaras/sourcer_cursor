@@ -634,6 +634,26 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
 
   mergeCategory: async (sourceId, targetId) => {
     try {
+      console.log(`Merging category ${sourceId} into ${targetId}`);
+      
+      // 1. Get current category tags to check for potential duplicates
+      const sourceTags = get().getCategoryTags(sourceId);
+      const targetTags = get().getCategoryTags(targetId);
+      
+      console.log(`Source category has ${sourceTags.length} tags, target has ${targetTags.length} tags`);
+      
+      // 2. Handle potential duplicates by removing source assignments for tags already in target
+      const targetTagIds = new Set(targetTags.map(t => t.id));
+      const duplicateSourceTags = sourceTags.filter(tag => targetTagIds.has(tag.id));
+      
+      if (duplicateSourceTags.length > 0) {
+        console.log(`Found ${duplicateSourceTags.length} duplicate tags, removing from source category`);
+        for (const tag of duplicateSourceTags) {
+          await get().removeTagFromCategory(sourceId, tag.id);
+        }
+      }
+      
+      // 3. Update remaining category_tags entries from source to target
       const { error: updateError } = await supabase
         .from('category_tags')
         .update({ category_id: targetId })
@@ -644,7 +664,21 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         throw updateError;
       }
 
+      console.log('Successfully updated category_tags relationships');
+
+      // 4. Check if source category is the default category and update if needed
+      if (get().defaultCategoryId === sourceId) {
+        console.log('Source category was the default category, updating to target category');
+        await get().setDefaultCategory(targetId);
+      }
+      
+      // 5. Delete the source category
       await get().deleteCategory(sourceId);
+      
+      // 6. Refresh category tags data to update the UI
+      await get().fetchCategoryTags();
+      
+      console.log('Category merge completed successfully');
     } catch (error) {
       console.error('Failed to merge categories:', error);
     }

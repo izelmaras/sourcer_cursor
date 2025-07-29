@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { useAtomStore } from "../../store/atoms";
@@ -94,13 +94,10 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
   const [mergeSourceId, setMergeSourceId] = useState<number | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
   const [mergeSearch, setMergeSearch] = useState('');
-  const [contextMenu, setContextMenu] = useState<{
-    show: boolean;
-    x: number;
-    y: number;
-    tagId: number;
-    tagName: string;
-  } | null>(null);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [selectedTagForAssignment, setSelectedTagForAssignment] = useState<{id: number, name: string} | null>(null);
+  const [assigningTag, setAssigningTag] = useState<number | null>(null);
+  const [modalPosition, setModalPosition] = useState<{x: number, y: number} | null>(null);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -119,6 +116,20 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
   useEffect(() => {
     setSelectedType(initialType);
   }, [initialType]);
+
+  // Prevent page scrolling when assignment modal is open
+  useEffect(() => {
+    if (isAssignmentModalOpen) {
+      // Disable page scrolling
+      document.body.style.overflow = 'hidden';
+      return () => {
+        // Re-enable page scrolling when modal closes
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isAssignmentModalOpen]);
+
+
 
   const getItems = () => {
     const items = (() => {
@@ -373,31 +384,34 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     setMergeSearch('');
   };
 
-  const handleTagContextMenu = (e: React.MouseEvent, tagId: number, tagName: string) => {
+  const handleTagRightClick = (e: React.MouseEvent, tagId: number, tagName: string) => {
     e.preventDefault();
-    setContextMenu({
-      show: true,
-      x: e.clientX,
-      y: e.clientY,
-      tagId,
-      tagName
-    });
+    setSelectedTagForAssignment({ id: tagId, name: tagName });
+    setModalPosition({ x: e.clientX, y: e.clientY });
+    setIsAssignmentModalOpen(true);
   };
 
-  const handleAssignTagToCategory = async (tagId: number, categoryId: number) => {
+  const handleAssignTag = async (categoryId: number) => {
+    if (!selectedTagForAssignment) return;
+    
     try {
-      await assignTagToCategory(categoryId, tagId);
-      setContextMenu(null);
-      // Refresh the data to show the updated categorization
+      console.log('Assigning tag', selectedTagForAssignment.id, 'to category', categoryId);
+      setAssigningTag(categoryId);
+      await assignTagToCategory(categoryId, selectedTagForAssignment.id);
+      console.log('Assignment successful');
+      setIsAssignmentModalOpen(false);
+      setSelectedTagForAssignment(null);
+      setModalPosition(null);
+      setAssigningTag(null);
       await Promise.all([fetchTags(), fetchCategoryTags()]);
+      console.log('Data refreshed');
     } catch (error) {
       console.error('Failed to assign tag to category:', error);
+      setAssigningTag(null);
     }
   };
 
-  const handleCloseContextMenu = () => {
-    setContextMenu(null);
-  };
+
 
   const filteredItems = getItems().filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -636,7 +650,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                       key={tag.id}
                                       className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 transition-colors border border-white/20"
                                       onClick={() => toggleTag(tag.name)}
-                                      onContextMenu={(e) => handleTagContextMenu(e, tag.id, tag.name)}
+                                      onContextMenu={(e) => handleTagRightClick(e, tag.id, tag.name)}
                                       title={`${tag.name} - Right click to assign to category`}
                                     >
                                       {tag.name}
@@ -919,28 +933,41 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
         </Dialog.Portal>
       </Dialog.Root>
 
-      {/* Context Menu for Tag Assignment - Rendered via Portal */}
-      {contextMenu && createPortal(
-        <>
-          <div 
-            className="fixed z-[9999] bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-2xl min-w-48"
-            style={{ 
-              left: contextMenu.x, 
-              top: contextMenu.y,
-              transform: 'translate(-50%, -100%) translateY(-10px)',
-              maxHeight: '300px'
+      {/* Tag Assignment Modal */}
+      <Dialog.Root open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Content 
+            className="fixed z-[99999] w-80 max-w-md outline-none"
+            style={{
+              left: modalPosition ? Math.min(modalPosition.x, window.innerWidth - 320) : '50%',
+              top: modalPosition ? Math.min(modalPosition.y, window.innerHeight - 400) : '50%',
+              transform: modalPosition ? 'none' : 'translate(-50%, -50%)'
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-2">
-              <div className="text-white text-sm font-medium px-3 py-2 border-b border-white/20">
-                Assign "{contextMenu.tagName}" to:
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white flex-1">
+                  Assign "{selectedTagForAssignment?.name}" to:
+                </h2>
+                <button
+                  onClick={() => {
+                    setIsAssignmentModalOpen(false);
+                    setModalPosition(null);
+                  }}
+                  className="text-white/60 hover:text-white transition-colors ml-2"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
               </div>
+              
               <div 
-                className="overflow-y-auto custom-scrollbar" 
+                className="max-h-80 overflow-y-auto custom-scrollbar"
                 style={{ 
-                  maxHeight: '200px'
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent'
                 }}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
               >
                 {categories.length === 0 ? (
                   <div className="px-3 py-2 text-white/60 text-sm">
@@ -950,30 +977,26 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                   categories.map((category) => (
                     <button
                       key={category.id}
-                      className="w-full text-left px-3 py-2 text-white text-sm hover:bg-white/20 rounded transition-colors flex items-center gap-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAssignTagToCategory(contextMenu.tagId, category.id);
-                      }}
+                      className={`w-full text-left px-3 py-2 text-white text-sm hover:bg-white/20 rounded transition-colors flex items-center gap-2 ${
+                        assigningTag === category.id ? 'bg-white/20' : ''
+                      }`}
+                      onClick={() => handleAssignTag(category.id)}
+                      disabled={assigningTag === category.id}
                     >
                       <span className="text-blue-400">📂</span>
-                      {category.name}
-                      {category.is_private && <LockIcon className="h-4 w-4 text-white/60" />}
+                      <span className="truncate">{category.name}</span>
+                      {category.is_private && <LockIcon className="h-4 w-4 text-white/60 flex-shrink-0" />}
+                      {assigningTag === category.id && (
+                        <span className="text-white/60 text-xs ml-auto">Assigning...</span>
+                      )}
                     </button>
                   ))
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Backdrop to close context menu */}
-          <div 
-            className="fixed inset-0 z-[9998]" 
-            onClick={handleCloseContextMenu}
-          />
-        </>,
-        document.body
-      )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </Dialog.Root>
   );
 };
