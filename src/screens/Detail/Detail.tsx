@@ -350,8 +350,12 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleExternalLink = () => {
-    if (currentAtom?.link) {
-      window.open(currentAtom.link, '_blank', 'noopener,noreferrer');
+    const linkToUse = editExternalLink || currentAtom?.link;
+    if (linkToUse) {
+      console.log('Opening external link:', linkToUse);
+      window.open(linkToUse, '_blank', 'noopener,noreferrer');
+    } else {
+      console.log('No external link available');
     }
   };
 
@@ -611,7 +615,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                       <DownloadIcon className="h-5 w-5" />
                     </IconButton>
                   )}
-                  {currentAtom?.link && (
+                  {(currentAtom?.link || editExternalLink) && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
                       <IconButton onClick={handleExternalLink} color="light" className="bg-blue-100 hover:bg-blue-200">
                         <LinkIcon className="h-4 w-4 text-blue-600" />
