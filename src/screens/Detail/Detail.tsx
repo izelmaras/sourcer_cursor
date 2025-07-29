@@ -350,10 +350,21 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleExternalLink = () => {
+    console.log('handleExternalLink called');
+    console.log('editExternalLink:', editExternalLink);
+    console.log('currentAtom?.link:', currentAtom?.link);
+    
     const linkToUse = editExternalLink || currentAtom?.link;
+    console.log('linkToUse:', linkToUse);
+    
     if (linkToUse) {
       console.log('Opening external link:', linkToUse);
-      window.open(linkToUse, '_blank', 'noopener,noreferrer');
+      try {
+        window.open(linkToUse, '_blank', 'noopener,noreferrer');
+        console.log('window.open called successfully');
+      } catch (error) {
+        console.error('Error opening link:', error);
+      }
     } else {
       console.log('No external link available');
     }
@@ -617,9 +628,17 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                   )}
                   {(currentAtom?.link || editExternalLink) && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
-                      <IconButton onClick={handleExternalLink} color="light" className="bg-blue-100 hover:bg-blue-200">
+                      <button 
+                        onClick={(e) => {
+                          console.log('Link button clicked!');
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleExternalLink();
+                        }} 
+                        className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+                      >
                         <LinkIcon className="h-4 w-4 text-blue-600" />
-                      </IconButton>
+                      </button>
                       <span className="text-sm text-blue-700 font-medium">External Link</span>
                     </div>
                   )}
