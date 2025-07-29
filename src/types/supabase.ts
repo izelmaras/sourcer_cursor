@@ -30,6 +30,7 @@ export interface Database {
           location_longitude: number | null
           location_address: string | null
           flag_for_deletion: boolean | null
+          prompt: string | null
         }
         Insert: {
           id?: number
@@ -51,6 +52,7 @@ export interface Database {
           location_longitude?: number | null
           location_address?: string | null
           flag_for_deletion?: boolean | null
+          prompt?: string | null
         }
         Update: {
           id?: number
@@ -72,6 +74,7 @@ export interface Database {
           location_longitude?: number | null
           location_address?: string | null
           flag_for_deletion?: boolean | null
+          prompt?: string | null
         }
       }
       categories: {

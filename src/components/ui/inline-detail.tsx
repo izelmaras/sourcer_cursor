@@ -58,7 +58,8 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   const [tagSearch, setTagSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [editSourceUrl, setEditSourceUrl] = useState(atom?.media_source_link || '');
-    const [editExternalLink, setEditExternalLink] = useState(atom?.link || '');
+  const [editExternalLink, setEditExternalLink] = useState(atom?.link || '');
+  const [editPrompt, setEditPrompt] = useState(atom?.prompt || '');
   const [atomCreators, setAtomCreators] = useState<{ id: number, name: string }[]>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -77,6 +78,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
       setEditTags(atom.tags || []);
       setEditSourceUrl(atom.media_source_link || '');
       setEditExternalLink(atom.link || '');
+      setEditPrompt(atom.prompt || '');
     }
   }, [atom]);
 
@@ -175,10 +177,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         tags: editTags,
         media_source_link: editSourceUrl,
         link: editExternalLink,
+        prompt: editPrompt,
         content_type: atom.content_type, // Preserve the current content type
       });
       setIsEditing(false);
-      onUpdate({ ...atom, title: editTitle, description: editDescription, creator_name: editCreators.join(', '), tags: editTags, media_source_link: editSourceUrl, link: editExternalLink });
+      onUpdate({ ...atom, title: editTitle, description: editDescription, creator_name: editCreators.join(', '), tags: editTags, media_source_link: editSourceUrl, link: editExternalLink, prompt: editPrompt });
     } catch (error) {
       console.error('Error updating atom:', error);
     } finally {
@@ -389,6 +392,16 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
             </div>
           )}
 
+          {/* Prompt - only show for image and video types if populated */}
+          {atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video') && (
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-white/90 mb-2">Prompt</h3>
+              <p className="text-sm text-white/80 leading-relaxed bg-white/5 p-3 rounded-lg border border-white/10">
+                {atom.prompt}
+              </p>
+            </div>
+          )}
+
           {/* Edit Mode */}
           {isEditing && (
             <div className="space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
@@ -432,6 +445,20 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                   placeholder="Enter external URL..."
                 />
               </div>
+
+              {/* Prompt field - only show for image and video types */}
+              {(atom.content_type === 'image' || atom.content_type === 'video') && (
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">Prompt</label>
+                  <textarea
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/50 resize-none"
+                    rows={3}
+                    placeholder="Enter AI generation prompt..."
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-white/90 mb-2">Content Type</label>
