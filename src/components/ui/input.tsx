@@ -24,10 +24,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             inputSize === "sm" ? "h-10 px-4 text-sm" : "h-12 px-5 text-base",
             "rounded-[12px]",
             isDark
-              ? "bg-neutral-800 text-white border-neutral-700 placeholder:text-neutral-400 focus:ring-neutral-600 focus:border-neutral-600"
+              ? "bg-neutral-800 text-white border-neutral-700 placeholder:text-neutral-400 placeholder:text-xs focus:ring-neutral-600 focus:border-neutral-600"
               : isGlass
-              ? "bg-white/5 backdrop-blur-sm text-white border-white/10 placeholder:text-white/60 focus:ring-white/20 focus:border-white/20 hover:bg-white/8"
-              : "bg-white text-gray-900 border-gray-200 placeholder:text-white focus:ring-gray-900 focus:border-gray-900",
+              ? "bg-white/5 backdrop-blur-sm text-white border-white/10 placeholder:text-white/60 placeholder:text-xs focus:ring-white/20 focus:border-white/20 hover:bg-white/8"
+              : "bg-white text-gray-900 border-gray-200 placeholder:text-white placeholder:text-xs focus:ring-gray-900 focus:border-gray-900",
             "disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}

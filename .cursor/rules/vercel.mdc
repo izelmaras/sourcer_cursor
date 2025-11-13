@@ -1,5 +1,0 @@
----
-description: run Vercel CLI to push to Vercel and Github after I say update the website
-globs:
-alwaysApply: false
----

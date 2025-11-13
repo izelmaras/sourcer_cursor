@@ -40,13 +40,24 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   const { id } = useParams();
   const { atoms: allAtoms, deleteAtom, updateAtom, addTag, addCreator, fetchTags, fetchCreators, tags, creators, toggleTag, addAtom, fetchAtoms, selectedTags, categories, getCategoryTags, defaultCategoryId } = useAtomStore();
   
-  const currentAtom = atom || allAtoms.find(a => a.id === Number(id));
+  const stableAtom = atom || allAtoms.find(a => a.id === Number(id));
+  
+  // Store atom in ref to prevent losing reference during save operations
+  const atomRef = useRef<Atom | undefined>(stableAtom);
+  useEffect(() => {
+    if (stableAtom) {
+      atomRef.current = stableAtom;
+    }
+  }, [stableAtom]);
+  
+  // Use ref value if stableAtom is temporarily undefined (e.g., during save)
+  const stableAtom = stableAtom || atomRef.current;
   
   // Force re-render when URL changes
   const [forceUpdate, setForceUpdate] = useState(0);
   
   // Debug logging
-  console.log('DetailView render:', { id, currentAtomId: currentAtom?.id, forceUpdate });
+  console.log('DetailView render:', { id, stableAtomId: stableAtom?.id, stableAtomId: stableAtom?.id, forceUpdate });
   
   // Create filtered atoms list using the same logic as GallerySection - OPTIMIZED WITH useMemo
   const actualFilteredAtoms = useMemo(() => {
@@ -98,8 +109,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   }, [allAtoms, searchTerm, selectedContentTypes, selectedCreator, categories, selectedTags, defaultCategoryId]);
   
   const currentIndex = useMemo(() => 
-    actualFilteredAtoms.findIndex(a => a.id === currentAtom?.id),
-    [actualFilteredAtoms, currentAtom?.id]
+    actualFilteredAtoms.findIndex(a => a.id === stableAtom?.id),
+    [actualFilteredAtoms, stableAtom?.id]
   );
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -112,17 +123,17 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isFlagged, setIsFlagged] = useState(currentAtom?.flag_for_deletion || false);
+  const [isFlagged, setIsFlagged] = useState(stableAtom?.flag_for_deletion || false);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(currentAtom?.title || '');
-  const [editDescription, setEditDescription] = useState(currentAtom?.description || '');
-  const [editCreators, setEditCreators] = useState<string[]>(currentAtom?.creator_name ? currentAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
-  const [editTags, setEditTags] = useState<string[]>(currentAtom?.tags || []);
+  const [editTitle, setEditTitle] = useState(stableAtom?.title || '');
+  const [editDescription, setEditDescription] = useState(stableAtom?.description || '');
+  const [editCreators, setEditCreators] = useState<string[]>(stableAtom?.creator_name ? stableAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
+  const [editTags, setEditTags] = useState<string[]>(stableAtom?.tags || []);
   const [tagSearch, setTagSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [editSourceUrl, setEditSourceUrl] = useState(currentAtom?.media_source_link || '');
-  const [editExternalLink, setEditExternalLink] = useState(currentAtom?.link || '');
+  const [editSourceUrl, setEditSourceUrl] = useState(stableAtom?.media_source_link || '');
+  const [editExternalLink, setEditExternalLink] = useState(stableAtom?.link || '');
 
   const [atomCreators, setAtomCreators] = useState<{ id: number, name: string }[]>([]);
 
@@ -139,6 +150,30 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   const [isEditingTags, setIsEditingTags] = useState(false);
   const [isEditingSourceLink, setIsEditingSourceLink] = useState(false);
   const [isEditingExternalLink, setIsEditingExternalLink] = useState(false);
+
+  // Tag editing functions - rebuilt from scratch
+  const normalizeTag = (tag: string): string => {
+    return tag.trim().toLowerCase().replace(/\s+/g, ' ');
+  };
+
+  const addTagToEdit = (tagName: string) => {
+    const normalized = normalizeTag(tagName);
+    if (normalized && !editTags.includes(normalized)) {
+      setEditTags([...editTags, normalized]);
+      setTagSearch('');
+    }
+  };
+
+  const removeTagFromEdit = (tagToRemove: string) => {
+    const normalized = normalizeTag(tagToRemove);
+    setEditTags(editTags.filter(tag => normalizeTag(tag) !== normalized));
+  };
+
+  const createAndAddTag = () => {
+    if (tagSearch.trim()) {
+      addTagToEdit(tagSearch);
+    }
+  };
 
   // Use the utility function from lib/utils
 
@@ -178,19 +213,21 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   }, [isTypeSelectorOpen, isEditTypeSelectorOpen]);
 
   useEffect(() => {
-    if (currentAtom) {
-      setEditTitle(currentAtom.title);
-      setEditDescription(currentAtom.description || '');
-      setEditCreators(currentAtom.creator_name ? currentAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
-      // Normalize tags to ensure consistency (lowercase, trimmed)
-      const normalizedTags = (currentAtom.tags || []).map(tag => tag.toLowerCase().trim()).filter(Boolean);
+    if (stableAtom) {
+      setEditTitle(stableAtom.title);
+      setEditDescription(stableAtom.description || '');
+      setEditCreators(stableAtom.creator_name ? stableAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
+      // Normalize tags to ensure consistency
+      const normalizedTags = (stableAtom.tags || [])
+        .map(tag => normalizeTag(tag))
+        .filter(Boolean);
       setEditTags(normalizedTags);
-      setIsFlagged(currentAtom.flag_for_deletion || false);
-      setEditSourceUrl(currentAtom.media_source_link || '');
-      setEditExternalLink(currentAtom.link || '');
-      setEditType(currentAtom.content_type || 'image');
+      setIsFlagged(stableAtom.flag_for_deletion || false);
+      setEditSourceUrl(stableAtom.media_source_link || '');
+      setEditExternalLink(stableAtom.link || '');
+      setEditType(stableAtom.content_type || 'image');
     }
-  }, [currentAtom, forceUpdate]);
+  }, [stableAtom, forceUpdate]);
 
   useEffect(() => {
     if (isZoomed) {
@@ -206,11 +243,11 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
 
   useEffect(() => {
     async function fetchAtomCreators() {
-      if (!currentAtom?.id) return;
+      if (!stableAtom?.id) return;
       const { data, error } = await supabase
         .from('atom_creators')
         .select('creator_id, creators(name, id)')
-        .eq('atom_id', currentAtom.id);
+        .eq('atom_id', stableAtom.id);
       if (data) {
         setAtomCreators(data.map((row: any) => ({ id: row.creators.id, name: row.creators.name })));
       } else {
@@ -218,7 +255,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
       }
     }
     fetchAtomCreators();
-  }, [currentAtom?.id]);
+  }, [stableAtom?.id]);
 
   const handleClose = () => {
     navigate('/', { replace: true });
@@ -300,14 +337,14 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleDownload = async () => {
-    if (!currentAtom?.media_source_link || isDownloading) return;
+    if (!stableAtom?.media_source_link || isDownloading) return;
 
     try {
       setIsDownloading(true);
-      const urlParts = currentAtom.media_source_link.split('/');
+      const urlParts = stableAtom.media_source_link.split('/');
       const filename = urlParts[urlParts.length - 1].split('?')[0] || 'download';
       const link = document.createElement('a');
-      link.href = currentAtom.media_source_link;
+      link.href = stableAtom.media_source_link;
       link.download = filename;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
@@ -322,16 +359,16 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleDelete = async () => {
-    if (currentAtom) {
+    if (stableAtom) {
       try {
-        await deleteAtom(currentAtom.id);
+        await deleteAtom(stableAtom.id);
         setIsDeleteModalOpen(false);
         
         // Refresh the atoms data to get the updated list
         await fetchAtoms();
         
         // Check if there are more items in the filtered list
-        const remainingAtoms = actualFilteredAtoms.filter(atom => atom.id !== currentAtom.id);
+        const remainingAtoms = actualFilteredAtoms.filter(atom => atom.id !== stableAtom.id);
         
         if (remainingAtoms.length > 0) {
           // Navigate to the next item in the list
@@ -352,20 +389,20 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleExternalLink = () => {
-    if (currentAtom?.link) {
-      window.open(currentAtom.link, '_blank', 'noopener,noreferrer');
+    if (stableAtom?.link) {
+      window.open(stableAtom.link, '_blank', 'noopener,noreferrer');
     }
   };
 
   const handleSaveEdits = async () => {
-    if (!currentAtom) {
-      console.log('No currentAtom, cannot save');
+    if (!stableAtom) {
+      console.log('No stableAtom, cannot save');
       return;
     }
     try {
       setIsSaving(true);
       console.log('handleSaveEdits called, saving edits with data:', {
-        id: currentAtom.id,
+        id: stableAtom.id,
         title: editTitle,
         tags: editTags,
         description: editDescription,
@@ -386,7 +423,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
           await addTag({ name: tag, count: 1 });
         }
       }
-      await updateAtom(currentAtom.id, {
+      await updateAtom(stableAtom.id, {
         title: editTitle,
         description: editDescription || null,
         creator_name: editCreators.join(', '), // legacy, join table is updated in store
@@ -409,85 +446,6 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
     }
   };
 
-  // Simple tag-only save function
-  const handleSaveTags = async () => {
-    if (!currentAtom) {
-      console.log('No currentAtom in handleSaveTags');
-      return;
-    }
-    try {
-      setIsSaving(true);
-      console.log('handleSaveTags called, saving tags only:', editTags);
-      
-      // Test basic database connection first
-      console.log('Testing database connection...');
-      const { data: testData, error: testError } = await supabase
-        .from('atoms')
-        .select('id')
-        .eq('id', currentAtom.id)
-        .single();
-      
-      if (testError) {
-        console.error('Database connection test failed:', testError);
-        throw testError;
-      }
-      console.log('Database connection test successful:', testData);
-      
-      // Ensure tags exist
-      for (const tag of editTags) {
-        if (!tags.find(t => t.name === tag)) {
-          console.log('Adding new tag:', tag);
-          await addTag({ name: tag, count: 1 });
-        }
-      }
-      
-      // Update only tags
-      console.log('Calling updateAtom with tags:', editTags);
-      await updateAtom(currentAtom.id, {
-        tags: editTags
-      });
-      
-      console.log('Tags saved successfully');
-      setIsEditingTags(false);
-    } catch (error) {
-      console.error('Error saving tags:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleTagClick = (tagName: string) => {
-    const normalizedTagName = tagName.toLowerCase().trim();
-    console.log('Adding tag:', normalizedTagName, 'to current tags:', editTags);
-    if (!editTags.includes(normalizedTagName)) {
-      const newTags = [...editTags, normalizedTagName];
-      setEditTags(newTags);
-      setTagSearch(""); // Only clear after adding
-      console.log('Updated tags:', newTags);
-    }
-  };
-
-  const handleCreateTag = () => {
-    if (tagSearch) {
-      const normalizedTagName = tagSearch.toLowerCase().trim();
-      console.log('Creating new tag:', normalizedTagName);
-      if (!editTags.includes(normalizedTagName)) {
-        const newTags = [...editTags, normalizedTagName];
-        setEditTags(newTags);
-        setTagSearch(""); // Only clear after adding
-        console.log('Created and added tag:', newTags);
-      }
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    const normalizedTag = tag.toLowerCase().trim();
-    console.log('Removing tag:', normalizedTag, 'from current tags:', editTags);
-    const newTags = editTags.filter(t => t.toLowerCase().trim() !== normalizedTag);
-    setEditTags(newTags);
-    console.log('Updated tags after removal:', newTags);
-  };
-
   const handleTagSelect = (tag: string) => {
     handleClose();
     toggleTag(tag);
@@ -495,12 +453,12 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleToggleFlag = async () => {
-    if (!currentAtom) return;
+    if (!stableAtom) return;
 
     try {
       const newFlagState = !isFlagged;
       setIsFlagged(newFlagState);
-      await updateAtom(currentAtom.id, {
+      await updateAtom(stableAtom.id, {
         flag_for_deletion: newFlagState
       });
     } catch (error) {
@@ -510,10 +468,10 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleTypeChange = async (newType: string) => {
-    if (!currentAtom) return;
+    if (!stableAtom) return;
 
     try {
-      await updateAtom(currentAtom.id, {
+      await updateAtom(stableAtom.id, {
         content_type: newType
       });
       setIsTypeSelectorOpen(false);
@@ -557,10 +515,10 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
       // Update both media_source_link and thumbnail_path
       setEditSourceUrl(url);
       setImageLoaded(false);
-      if (currentAtom) {
-        currentAtom.media_source_link = url;
-        currentAtom.thumbnail_path = url;
-        await updateAtom(currentAtom.id, {
+      if (stableAtom) {
+        stableAtom.media_source_link = url;
+        stableAtom.thumbnail_path = url;
+        await updateAtom(stableAtom.id, {
           media_source_link: url,
           thumbnail_path: url,
         });
@@ -575,11 +533,11 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
 
   // Duplicate function
   const handleDuplicate = async () => {
-    if (!currentAtom) return;
+    if (!stableAtom) return;
     // Prepare new atom data, omitting id, created_at, updated_at
     const {
       id, created_at, updated_at, ...rest
-    } = currentAtom;
+    } = stableAtom;
     // Insert as new atom
     await addAtom({
       ...rest,
@@ -611,26 +569,38 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
     }, matches[0]);
   };
 
-  if (!currentAtom) return <span />;
+  // Use stableAtom which falls back to ref if stableAtom is temporarily undefined
+  if (!stableAtom) return <span />;
 
-  const hasMedia = currentAtom.media_source_link && (currentAtom.content_type === 'image' || currentAtom.content_type === 'video');
-  const isVideo = hasMedia && isVideoUrl(currentAtom.media_source_link || '');
+  const hasMedia = stableAtom.media_source_link && (stableAtom.content_type === 'image' || stableAtom.content_type === 'video');
+  const isVideo = hasMedia && isVideoUrl(stableAtom.media_source_link || '');
 
-  const filteredTags = tags
-    .filter(tag => 
-      tag.name.toLowerCase().includes(tagSearch.toLowerCase()) &&
-      !editTags.includes(tag.name.toLowerCase())
-    )
-    .slice(0, 12);
+  // Filter tags for autocomplete - exclude already added tags
+  const filteredTags = useMemo(() => {
+    const searchLower = tagSearch.toLowerCase().trim();
+    if (!searchLower) return [];
+    
+    return tags
+      .filter(tag => {
+        const tagNameLower = normalizeTag(tag.name);
+        return tagNameLower.includes(searchLower) && 
+               !editTags.some(et => normalizeTag(et) === tagNameLower);
+      })
+      .slice(0, 12);
+  }, [tags, tagSearch, editTags]);
 
-  const showCreateTag = tagSearch && 
-    !tags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) &&
-    !editTags.includes(tagSearch.toLowerCase());
+  // Show create tag option if search doesn't match existing tag
+  const showCreateTag = useMemo(() => {
+    if (!tagSearch.trim()) return false;
+    const searchNormalized = normalizeTag(tagSearch);
+    return !tags.some(t => normalizeTag(t.name) === searchNormalized) &&
+           !editTags.some(et => normalizeTag(et) === searchNormalized);
+  }, [tagSearch, tags, editTags]);
 
   // Debug output for image rendering - REMOVED FOR PERFORMANCE
   // console.log('DetailView debug:', {
-  //   media_source_link: currentAtom.media_source_link,
-  //   content_type: currentAtom.content_type,
+  //   media_source_link: stableAtom.media_source_link,
+  //   content_type: stableAtom.content_type,
   //   imageLoaded,
   //   hasMedia,
   //   isVideo
@@ -660,7 +630,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
     { icon: <LinkIcon className="h-4 w-4 text-white" />, label: "Website", type: "website" },
     { icon: <PlayCircleIcon className="h-4 w-4 text-white" />, label: "YouTube", type: "youtube" },
   ];
-  const [editType, setEditType] = useState(currentAtom?.content_type || "image");
+  const [editType, setEditType] = useState(stableAtom?.content_type || "image");
 
   return (
     <>
@@ -682,12 +652,12 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                       <ZoomInIcon className="h-5 w-5" />
                     </IconButton>
                   )}
-                  {currentAtom?.media_source_link && (
+                  {stableAtom?.media_source_link && (
                     <IconButton onClick={handleDownload} disabled={isDownloading} color="light">
                       <DownloadIcon className="h-5 w-5" />
                     </IconButton>
                   )}
-                  {currentAtom?.link && (
+                  {stableAtom?.link && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
                       <IconButton onClick={handleExternalLink} color="light" className="bg-blue-100 hover:bg-blue-200">
                         <LinkIcon className="h-4 w-4 text-blue-600" />
@@ -710,11 +680,107 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
               {/* Two-column layout */}
               <div className="flex-1 flex">
                 {/* Left column - Media */}
-                <div className="flex-1 flex items-center justify-center bg-gray-50 min-h-0">
+                <div className="flex-1 flex flex-col bg-gray-50 min-h-0">
+                  {/* Save/Cancel buttons - appear above image when editing */}
+                  {(isEditingTitle || isEditingDescription || isEditingTags || isEditingSourceLink || isEditingExternalLink) && (
+                    <div className="flex gap-2 p-3 bg-blue-50 border-b border-blue-200" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('General save button clicked!', { 
+                            id: stableAtom.id, 
+                            title: editTitle,
+                            description: editDescription,
+                            tags: editTags,
+                            sourceLink: editSourceUrl,
+                            externalLink: editExternalLink
+                          });
+                          try {
+                            setIsSaving(true);
+                            
+                            // Preserve the atom ID before any async operations
+                            const atomId = stableAtom.id;
+                            
+                            // Normalize all tags before saving
+                            const normalizedTags = editTags
+                              .map(tag => normalizeTag(tag))
+                              .filter(Boolean);
+                            
+                            // Ensure all tags exist in the database
+                            for (const tag of normalizedTags) {
+                              const existingTag = tags.find(t => normalizeTag(t.name) === tag);
+                              if (!existingTag) {
+                                await addTag({ name: tag, count: 1 });
+                              }
+                            }
+                            
+                            // Update atom with normalized tags
+                            // updateAtom already updates the local state, so we don't need fetchAtoms()
+                            await updateAtom(atomId, {
+                              title: editTitle,
+                              description: editDescription,
+                              tags: normalizedTags,
+                              media_source_link: editSourceUrl,
+                              link: editExternalLink
+                            });
+                            
+                            // Refresh tags to get updated tag list (new tags might have been added)
+                            await fetchTags();
+                            
+                            // Force re-render to sync with updated atom data
+                            // updateAtom already updated the store, so stableAtom should still be valid
+                            setForceUpdate(prev => prev + 1);
+                            
+                            // Close all edit states
+                            setIsEditingTitle(false);
+                            setIsEditingDescription(false);
+                            setIsEditingTags(false);
+                            setIsEditingSourceLink(false);
+                            setIsEditingExternalLink(false);
+                          } catch (error) {
+                            console.error('Error saving changes:', error);
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }}
+                        size="sm"
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        {isSaving ? 'Saving...' : 'Save All Changes'}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          // Reset all edit states
+                          setEditTitle(stableAtom?.title || '');
+                          setEditDescription(stableAtom?.description || '');
+                          const resetTags = (stableAtom?.tags || [])
+                            .map(tag => normalizeTag(tag))
+                            .filter(Boolean);
+                          setEditTags(resetTags);
+                          setEditSourceUrl(stableAtom?.media_source_link || '');
+                          setEditExternalLink(stableAtom?.link || '');
+                          setIsEditingTitle(false);
+                          setIsEditingDescription(false);
+                          setIsEditingTags(false);
+                          setIsEditingSourceLink(false);
+                          setIsEditingExternalLink(false);
+                        }}
+                        size="sm"
+                        className="bg-gray-500 text-white hover:bg-gray-600"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Media content */}
+                  <div className="flex-1 flex items-center justify-center min-h-0">
                   {hasMedia ? (
                     isVideo ? (
                       <VideoPlayer
-                        src={currentAtom?.media_source_link || ''}
+                        src={stableAtom?.media_source_link || ''}
                         className="max-h-full w-auto object-contain"
                         controls={true}
                         autoPlay={false}
@@ -722,8 +788,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                       />
                     ) : (
                       <img
-                        src={currentAtom?.media_source_link || '/placeholder-image.png'}
-                        alt={currentAtom?.title || 'Image not available'}
+                        src={stableAtom?.media_source_link || '/placeholder-image.png'}
+                        alt={stableAtom?.title || 'Image not available'}
                         className={`max-w-full max-h-full w-auto h-auto object-contain transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                         onLoad={() => setImageLoaded(true)}
                         onError={e => { e.currentTarget.src = '/placeholder-image.png'; }}
@@ -735,6 +801,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                       <p>No media content</p>
                     </div>
                   )}
+                  </div>
                 </div>
 
                 {/* Right column - Content */}
@@ -749,7 +816,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                           onClick={() => setIsTypeSelectorOpen(!isTypeSelectorOpen)}
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-sm transition-all duration-200"
                         >
-                          <span>{contentTypes.find(ct => ct.type === currentAtom?.content_type)?.label || 'Select Type'}</span>
+                          <span>{contentTypes.find(ct => ct.type === stableAtom?.content_type)?.label || 'Select Type'}</span>
                           <ChevronDownIcon className="h-4 w-4" />
                         </button>
                         {isTypeSelectorOpen && (
@@ -760,7 +827,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                                   key={ct.type}
                                   onClick={() => handleTypeChange(ct.type)}
                                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                                    currentAtom?.content_type === ct.type
+                                    stableAtom?.content_type === ct.type
                                       ? 'bg-blue-50 text-blue-700'
                                       : 'text-gray-700 hover:bg-gray-50'
                                   }`}
@@ -774,72 +841,6 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                         )}
                       </div>
                     </div>
-
-                    {/* General Save Button - appears when any field is being edited */}
-                    {(isEditingTitle || isEditingDescription || isEditingTags || isEditingSourceLink || isEditingExternalLink) && (
-                      <div className="flex gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <Button
-                          onClick={async () => {
-                            console.log('General save button clicked!', { 
-                              id: currentAtom.id, 
-                              title: editTitle,
-                              description: editDescription,
-                              tags: editTags,
-                              sourceLink: editSourceUrl,
-                              externalLink: editExternalLink
-                            });
-                            try {
-                              setIsSaving(true);
-                              await updateAtom(currentAtom.id, {
-                                title: editTitle,
-                                description: editDescription,
-                                tags: editTags,
-                                media_source_link: editSourceUrl,
-                                link: editExternalLink
-                              });
-                              // Refresh atoms to get updated data
-                              await fetchAtoms();
-                              // Force re-render to sync with updated atom data
-                              setForceUpdate(prev => prev + 1);
-                              console.log('General save successful');
-                              // Close all edit states
-                              setIsEditingTitle(false);
-                              setIsEditingDescription(false);
-                              setIsEditingTags(false);
-                              setIsEditingSourceLink(false);
-                              setIsEditingExternalLink(false);
-                            } catch (error) {
-                              console.error('Error saving changes:', error);
-                            } finally {
-                              setIsSaving(false);
-                            }
-                          }}
-                          size="sm"
-                          className="bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                          {isSaving ? 'Saving...' : 'Save All Changes'}
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            // Reset all edit states
-                            setEditTitle(currentAtom?.title || '');
-                            setEditDescription(currentAtom?.description || '');
-                            setEditTags(currentAtom?.tags || []);
-                            setEditSourceLink(currentAtom?.media_source_link || '');
-                            setEditExternalLink(currentAtom?.link || '');
-                            setIsEditingTitle(false);
-                            setIsEditingDescription(false);
-                            setIsEditingTags(false);
-                            setIsEditingSourceLink(false);
-                            setIsEditingExternalLink(false);
-                          }}
-                          size="sm"
-                          className="bg-gray-500 text-white hover:bg-gray-600"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
 
                     {/* Title */}
                     <div className="space-y-2">
@@ -868,7 +869,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                         </div>
                       ) : (
                         <div className="text-lg font-medium text-gray-900 min-h-[2.5rem] flex items-center">
-                          {currentAtom?.title || 'No title'}
+                          {stableAtom?.title || 'No title'}
                         </div>
                       )}
                     </div>
@@ -891,7 +892,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
                             placeholder="Enter description..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-xs placeholder:text-white"
                             rows={4}
                           />
                           <div className="text-sm text-gray-500">
@@ -900,8 +901,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                         </div>
                       ) : (
                         <div className="text-gray-600 min-h-[4rem]">
-                          {currentAtom?.description ? (
-                            <HtmlContent html={currentAtom.description} />
+                          {stableAtom?.description ? (
+                            <HtmlContent html={stableAtom.description} />
                           ) : (
                             'No description'
                           )}
@@ -936,7 +937,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                         </div>
                       ) : (
                         <div className="text-gray-600 min-h-[2.5rem] flex items-center">
-                          {currentAtom?.media_source_link || 'No source link'}
+                          {stableAtom?.media_source_link || 'No source link'}
                         </div>
                       )}
                     </div>
@@ -968,7 +969,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                         </div>
                       ) : (
                         <div className="text-gray-600 min-h-[2.5rem] flex items-center">
-                          {currentAtom?.link || 'No external link'}
+                          {stableAtom?.link || 'No external link'}
                         </div>
                       )}
                     </div>
@@ -995,9 +996,9 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                               if (e.key === 'Enter') {
                                 e.preventDefault();
                                 if (filteredTags.length > 0) {
-                                  handleTagClick(filteredTags[0].name);
+                                  addTagToEdit(filteredTags[0].name);
                                 } else if (showCreateTag) {
-                                  handleCreateTag();
+                                  createAndAddTag();
                                 }
                               }
                             }}
@@ -1011,7 +1012,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                                   key={tag}
                                   size="sm"
                                   rightIcon={<XIcon className="h-4 w-4 ml-2" />}
-                                  onClick={() => handleRemoveTag(tag)}
+                                  onClick={() => removeTagFromEdit(tag)}
                                   tabIndex={-1}
                                 >
                                   {tag}
@@ -1026,7 +1027,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                                   key={tag.id}
                                   size="sm"
                                   selected={false}
-                                  onClick={() => handleTagClick(tag.name)}
+                                  onClick={() => addTagToEdit(tag.name)}
                                 >
                                   {tag.name}
                                 </Button>
@@ -1035,7 +1036,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                                 <Button
                                   size="sm"
                                   selected={false}
-                                  onClick={handleCreateTag}
+                                  onClick={createAndAddTag}
                                 >
                                   {`Create "${tagSearch}"`}
                                 </Button>
@@ -1048,8 +1049,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-2 min-h-[2.5rem] items-center">
-                          {currentAtom?.tags && currentAtom.tags.length > 0 ? (
-                            currentAtom.tags.map((tag) => (
+                          {stableAtom?.tags && stableAtom.tags.length > 0 ? (
+                            stableAtom.tags.map((tag) => (
                               <Button
                                 key={tag}
                                 size="sm"
@@ -1087,12 +1088,12 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                     )}
 
                     {/* Link preview for link content */}
-                    {currentAtom?.content_type === 'link' && currentAtom?.link && (
+                    {stableAtom?.content_type === 'link' && stableAtom?.link && (
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Link Preview</label>
                         <div className="border rounded-lg overflow-hidden">
-                          <IframeWithFallback url={currentAtom.link} height={300}>
-                            <LiveLinkPreview url={currentAtom.link} height={300}>
+                          <IframeWithFallback url={stableAtom.link} height={300}>
+                            <LiveLinkPreview url={stableAtom.link} height={300}>
                               <span style={{display:'none'}} />
                             </LiveLinkPreview>
                           </IframeWithFallback>
@@ -1159,8 +1160,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
           >
             <img
               ref={imageRef}
-              src={currentAtom.media_source_link || ''}
-              alt={currentAtom.title || ''}
+              src={stableAtom.media_source_link || ''}
+              alt={stableAtom.title || ''}
               className="max-h-screen max-w-full object-contain transition-transform duration-200"
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,

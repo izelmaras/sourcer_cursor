@@ -378,9 +378,26 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
     try {
       console.log('updateAtom called with:', { id, updates });
       // Normalize tags if they're being updated
-      const normalizedUpdates = updates.tags 
-        ? { ...updates, tags: updates.tags.map(normalizeTagName) }
-        : updates;
+      // Always ensure tags is an array (even if empty) when explicitly updating
+      const normalizedUpdates = { ...updates };
+      if ('tags' in updates) {
+        // If tags is explicitly provided (even if null or undefined), normalize it
+        normalizedUpdates.tags = updates.tags 
+          ? updates.tags.map(normalizeTagName).filter(Boolean)
+          : [];
+      }
+      
+      // Remove prompt field if it's empty or if the column doesn't exist in the database
+      // This prevents errors if the migration hasn't been applied yet
+      // TODO: Remove this check once the prompt column migration is confirmed to be applied
+      if ('prompt' in normalizedUpdates) {
+        // Only include prompt if it has a value (not empty string, null, or undefined)
+        const promptValue = normalizedUpdates.prompt;
+        if (!promptValue || (typeof promptValue === 'string' && promptValue.trim() === '')) {
+          delete normalizedUpdates.prompt;
+        }
+      }
+      
       console.log('normalizedUpdates:', normalizedUpdates);
 
       // --- MULTI-CREATOR LOGIC START ---
@@ -408,22 +425,62 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
       // --- MULTI-CREATOR LOGIC END ---
 
       console.log('Calling supabase update with:', { id, normalizedUpdates });
-      const { error } = await supabase
+      
+      // Ensure tags is properly formatted as an array for Supabase
+      if ('tags' in normalizedUpdates) {
+        // Supabase expects tags as a string array, ensure it's always an array
+        normalizedUpdates.tags = Array.isArray(normalizedUpdates.tags) 
+          ? normalizedUpdates.tags 
+          : [];
+      }
+      
+      let { data, error } = await supabase
         .from('atoms')
         .update(normalizedUpdates)
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
+
+      // If error is about prompt column not existing, retry without prompt
+      if (error && error.message && error.message.includes("prompt") && error.message.includes("schema cache")) {
+        console.warn('Prompt column not found, retrying update without prompt field');
+        const updatesWithoutPrompt = { ...normalizedUpdates };
+        delete updatesWithoutPrompt.prompt;
+        
+        const retryResult = await supabase
+          .from('atoms')
+          .update(updatesWithoutPrompt)
+          .eq('id', id)
+          .select()
+          .single();
+        
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       if (error) {
         console.error('Error updating atom:', error.message, error);
+        console.error('Update payload was:', normalizedUpdates);
         throw error;
       }
-      console.log('Supabase update successful');
+      console.log('Supabase update successful, returned data:', data);
 
-      const atoms = get().atoms.map((atom: Atom) =>
-        atom.id === id ? { ...atom, ...normalizedUpdates } : atom
-      );
-      set({ atoms });
-      console.log('Successfully updated atom in store');
+      // Use the data returned from Supabase to update local state
+      // This ensures we have the exact values from the database
+      if (data) {
+        const atoms = get().atoms.map((atom: Atom) =>
+          atom.id === id ? { ...atom, ...data } : atom
+        );
+        set({ atoms });
+        console.log('Successfully updated atom in store with database data');
+      } else {
+        // Fallback to normalizedUpdates if no data returned
+        const atoms = get().atoms.map((atom: Atom) =>
+          atom.id === id ? { ...atom, ...normalizedUpdates } : atom
+        );
+        set({ atoms });
+        console.log('Successfully updated atom in store with normalized updates');
+      }
     } catch (error) {
       console.error('Failed to update atom:', error);
     }

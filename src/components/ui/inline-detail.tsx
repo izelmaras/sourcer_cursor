@@ -39,7 +39,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   onUpdate, 
   onDelete 
 }) => {
-  const { deleteAtom, updateAtom, fetchTags, fetchCreators, tags, fetchAtoms } = useAtomStore();
+  const { deleteAtom, updateAtom, fetchTags, fetchCreators, tags, creators, fetchAtoms, addCreator } = useAtomStore();
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -56,6 +56,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   const [editCreators, setEditCreators] = useState<string[]>(atom?.creator_name ? atom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
   const [editTags, setEditTags] = useState<string[]>(atom?.tags || []);
   const [tagSearch, setTagSearch] = useState('');
+  const [creatorSearch, setCreatorSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [editSourceUrl, setEditSourceUrl] = useState(atom?.media_source_link || '');
   const [editExternalLink, setEditExternalLink] = useState(atom?.link || '');
@@ -74,13 +75,22 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     if (atom) {
       setEditTitle(atom.title);
       setEditDescription(atom.description || '');
-      setEditCreators(atom.creator_name ? atom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
       setEditTags(atom.tags || []);
       setEditSourceUrl(atom.media_source_link || '');
       setEditExternalLink(atom.link || '');
       setEditPrompt(atom.prompt || '');
     }
   }, [atom]);
+
+  useEffect(() => {
+    if (atomCreators.length > 0) {
+      setEditCreators(atomCreators.map(c => c.name));
+    } else if (atom?.creator_name) {
+      setEditCreators(atom.creator_name.split(',').map(s => s.trim()).filter(Boolean));
+    } else {
+      setEditCreators([]);
+    }
+  }, [atomCreators, atom?.creator_name]);
 
   useEffect(() => {
     if (isZoomed) {
@@ -170,6 +180,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     if (!atom) return;
     setIsSaving(true);
     try {
+      for (const creatorName of editCreators) {
+        if (!creators.find(c => c.name === creatorName)) {
+          await addCreator({ name: creatorName, count: 1 });
+        }
+      }
       await updateAtom(atom.id, {
         title: editTitle,
         description: editDescription,
@@ -180,6 +195,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         prompt: editPrompt,
         content_type: atom.content_type, // Preserve the current content type
       });
+      await fetchCreators();
       setIsEditing(false);
       onUpdate({ ...atom, title: editTitle, description: editDescription, creator_name: editCreators.join(', '), tags: editTags, media_source_link: editSourceUrl, link: editExternalLink, prompt: editPrompt });
     } catch (error) {
@@ -274,6 +290,17 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     !tags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) &&
     !editTags.includes(tagSearch);
 
+  const filteredCreators = creators
+    .filter(creator => 
+      creator.name.toLowerCase().includes(creatorSearch.toLowerCase()) &&
+      !editCreators.includes(creator.name)
+    )
+    .slice(0, 12);
+
+  const showCreateCreator = creatorSearch && 
+    !creators.find(c => c.name.toLowerCase() === creatorSearch.toLowerCase()) &&
+    !editCreators.includes(creatorSearch);
+
   const contentTypes = [
     { icon: <ImageIcon className="h-4 w-4 text-white" />, label: "Image", type: "image" },
     { icon: <LinkIcon className="h-4 w-4 text-white" />, label: "Link", type: "link" },
@@ -345,6 +372,223 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
       <div className="flex flex-col lg:flex-row">
         {/* Media Section */}
         <div className="flex-1 p-4 lg:p-6">
+          {/* Edit Mode - appears above image when editing */}
+          {isEditing && (
+            <>
+              {/* Edit Form */}
+              <div className="space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 mb-4">
+                {/* Save/Cancel buttons at top of form */}
+                <div className="flex gap-2 pb-2 border-b border-white/10">
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex-1 bg-white/10 text-white border-white/20 hover:bg-white/20"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                  <Button
+                    onClick={() => setIsEditing(false)}
+                    className="bg-white/5 text-white border-white/10 hover:bg-white/10"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">Content Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {contentTypes.map((type) => (
+                      <button
+                        key={type.type}
+                        onClick={() => {
+                          const updatedAtom = { ...atom, content_type: type.type };
+                          onUpdate(updatedAtom);
+                        }}
+                        className={`px-3 py-2 text-sm rounded-md transition-all duration-200 flex items-center gap-2 ${
+                          atom.content_type === type.type
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        {type.icon}
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">Creators</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editCreators.map((creator, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs bg-white/10 text-white rounded-md flex items-center gap-1"
+                      >
+                        {creator}
+                        <button
+                          onClick={() => setEditCreators(editCreators.filter((_, i) => i !== index))}
+                          className="text-white/70 hover:text-white"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={creatorSearch}
+                      onChange={(e) => setCreatorSearch(e.target.value)}
+                      color="glass"
+                      placeholder="Search or add creators..."
+                    />
+                    {showCreateCreator && (
+                      <Button
+                        onClick={async () => {
+                          if (creatorSearch && !creators.find(c => c.name === creatorSearch)) {
+                            await addCreator({ name: creatorSearch, count: 1 });
+                            await fetchCreators();
+                          }
+                          setEditCreators([...editCreators, creatorSearch]);
+                          setCreatorSearch('');
+                        }}
+                        className="bg-white/10 text-white border-white/20"
+                      >
+                        Add
+                      </Button>
+                    )}
+                  </div>
+                  {creatorSearch && (
+                    <div className="mt-2 max-h-32 overflow-y-auto">
+                      {filteredCreators.map((creator) => (
+                        <button
+                          key={creator.id}
+                          onClick={() => {
+                            setEditCreators([...editCreators, creator.name]);
+                            setCreatorSearch('');
+                          }}
+                          className="block w-full text-left px-2 py-1 text-sm text-white/80 hover:bg-white/10 rounded"
+                        >
+                          {creator.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">Tags</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editTags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs bg-white/10 text-white rounded-md flex items-center gap-1"
+                      >
+                        {tag}
+                        <button
+                          onClick={() => setEditTags(editTags.filter((_, i) => i !== index))}
+                          className="text-white/70 hover:text-white"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={tagSearch}
+                      onChange={(e) => setTagSearch(e.target.value)}
+                      color="glass"
+                      placeholder="Search or add tags..."
+                    />
+                    {showCreateTag && (
+                      <Button
+                        onClick={() => {
+                          setEditTags([...editTags, tagSearch]);
+                          setTagSearch('');
+                        }}
+                        className="bg-white/10 text-white border-white/20"
+                      >
+                        Add
+                      </Button>
+                    )}
+                  </div>
+                  {tagSearch && (
+                    <div className="mt-2 max-h-32 overflow-y-auto">
+                      {filteredTags.map((tag) => (
+                        <button
+                          key={tag.id}
+                          onClick={() => {
+                            setEditTags([...editTags, tag.name]);
+                            setTagSearch('');
+                          }}
+                          className="block w-full text-left px-2 py-1 text-sm text-white/80 hover:bg-white/10 rounded"
+                        >
+                          {tag.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">Title</label>
+                  <Input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    color="glass"
+                    placeholder="Enter title..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">Description</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[12px] text-white placeholder:text-white/60 placeholder:text-xs resize-none focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-colors duration-200"
+                    rows={4}
+                    placeholder="Enter description..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">Source Link</label>
+                  <Input
+                    value={editSourceUrl}
+                    onChange={(e) => setEditSourceUrl(e.target.value)}
+                    color="glass"
+                    placeholder="Enter source URL..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">External Link</label>
+                  <Input
+                    value={editExternalLink}
+                    onChange={(e) => setEditExternalLink(e.target.value)}
+                    color="glass"
+                    placeholder="Enter external URL..."
+                  />
+                </div>
+
+                {/* Prompt field - only show for image and video types */}
+                {(atom.content_type === 'image' || atom.content_type === 'video') && (
+                  <div>
+                    <label className="block text-sm font-medium text-white/90 mb-2">Prompt</label>
+                    <textarea
+                      value={editPrompt}
+                      onChange={(e) => setEditPrompt(e.target.value)}
+                      className="w-full p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[12px] text-white placeholder:text-white/60 placeholder:text-xs resize-none focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-colors duration-200"
+                      rows={3}
+                      placeholder="Enter AI generation prompt..."
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          
           {hasMedia && (
             <div className="relative bg-white/10 backdrop-blur-sm flex items-center justify-center rounded-lg overflow-hidden mb-4 border border-white/5 min-h-[200px]">
               {isVideo ? (
@@ -392,8 +636,8 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
             </div>
           )}
 
-          {/* Prompt - only show for image and video types if populated */}
-          {atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video') && (
+          {/* Prompt - only show for image and video types if populated (non-edit mode) */}
+          {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video') && (
             <div className="mb-4">
               <h3 className="text-sm font-medium text-white/90 mb-2">Prompt</h3>
               <p className="text-sm text-white/80 leading-relaxed bg-white/5 p-3 rounded-lg border border-white/10">
@@ -401,174 +645,34 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
               </p>
             </div>
           )}
-
-          {/* Edit Mode */}
-          {isEditing && (
-            <div className="space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">Title</label>
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder-white/50"
-                  placeholder="Enter title..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">Description</label>
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/50 resize-none"
-                  rows={4}
-                  placeholder="Enter description..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">Source Link</label>
-                <Input
-                  value={editSourceUrl}
-                  onChange={(e) => setEditSourceUrl(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder-white/50"
-                  placeholder="Enter source URL..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">External Link</label>
-                <Input
-                  value={editExternalLink}
-                  onChange={(e) => setEditExternalLink(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder-white/50"
-                  placeholder="Enter external URL..."
-                />
-              </div>
-
-              {/* Prompt field - only show for image and video types */}
-              {(atom.content_type === 'image' || atom.content_type === 'video') && (
-                <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">Prompt</label>
-                  <textarea
-                    value={editPrompt}
-                    onChange={(e) => setEditPrompt(e.target.value)}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/50 resize-none"
-                    rows={3}
-                    placeholder="Enter AI generation prompt..."
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">Content Type</label>
-                <div className="flex flex-wrap gap-2">
-                  {contentTypes.map((type) => (
-                    <button
-                      key={type.type}
-                      onClick={() => {
-                        const updatedAtom = { ...atom, content_type: type.type };
-                        onUpdate(updatedAtom);
-                      }}
-                      className={`px-3 py-2 text-sm rounded-md transition-all duration-200 flex items-center gap-2 ${
-                        atom.content_type === type.type
-                          ? 'bg-white/20 text-white border border-white/30'
-                          : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      {type.icon}
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">Tags</label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {editTags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 text-xs bg-white/10 text-white rounded-md flex items-center gap-1"
-                    >
-                      {tag}
-                      <button
-                        onClick={() => setEditTags(editTags.filter((_, i) => i !== index))}
-                        className="text-white/70 hover:text-white"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={tagSearch}
-                    onChange={(e) => setTagSearch(e.target.value)}
-                    color="glass"
-                    placeholder="Search or add tags..."
-                  />
-                  {showCreateTag && (
-                    <Button
-                      onClick={() => {
-                        setEditTags([...editTags, tagSearch]);
-                        setTagSearch('');
-                      }}
-                      className="bg-white/10 text-white border-white/20"
-                    >
-                      Add
-                    </Button>
-                  )}
-                </div>
-                {tagSearch && (
-                  <div className="mt-2 max-h-32 overflow-y-auto">
-                    {filteredTags.map((tag) => (
-                      <button
-                        key={tag.id}
-                        onClick={() => {
-                          setEditTags([...editTags, tag.name]);
-                          setTagSearch('');
-                        }}
-                        className="block w-full text-left px-2 py-1 text-sm text-white/80 hover:bg-white/10 rounded"
-                      >
-                        {tag.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex-1 bg-white/10 text-white border-white/20"
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
-                <Button
-                  onClick={() => setIsEditing(false)}
-                  className="bg-white/5 text-white border-white/10"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Sidebar */}
         <div className="w-full lg:w-80 p-4 lg:p-6 bg-white/2 backdrop-blur-sm border-t lg:border-t-0 lg:border-l border-white/5">
           {/* Creator Info */}
-          {atom.creator_name && (
+          {(atomCreators.length > 0 || atom.creator_name) && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-white/90 mb-2">Creator</h3>
-              <div 
-                className="cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors"
-                onClick={() => atom.creator_name && handleCreatorSelect(atom.creator_name)}
-              >
-                <CreatorInfo name={atom.creator_name} />
-              </div>
+              <h3 className="text-sm font-medium text-white/90 mb-2">Creator{atomCreators.length > 1 || (atom.creator_name && atom.creator_name.split(',').length > 1) ? 's' : ''}</h3>
+              {atomCreators.length > 0 ? (
+                <div className="space-y-2">
+                  {atomCreators.map((creator) => (
+                    <div
+                      key={creator.id}
+                      className="cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors"
+                      onClick={() => handleCreatorSelect(creator.name)}
+                    >
+                      <CreatorInfo name={creator.name} />
+                    </div>
+                  ))}
+                </div>
+              ) : atom.creator_name ? (
+                <div 
+                  className="cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors"
+                  onClick={() => handleCreatorSelect(atom.creator_name)}
+                >
+                  <CreatorInfo name={atom.creator_name} />
+                </div>
+              ) : null}
             </div>
           )}
 
