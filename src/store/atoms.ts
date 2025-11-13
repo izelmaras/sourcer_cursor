@@ -376,10 +376,12 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
 
   updateAtom: async (id, updates) => {
     try {
+      console.log('updateAtom called with:', { id, updates });
       // Normalize tags if they're being updated
       const normalizedUpdates = updates.tags 
         ? { ...updates, tags: updates.tags.map(normalizeTagName) }
         : updates;
+      console.log('normalizedUpdates:', normalizedUpdates);
 
       // --- MULTI-CREATOR LOGIC START ---
       if (updates.creator_name) {
@@ -405,6 +407,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
       }
       // --- MULTI-CREATOR LOGIC END ---
 
+      console.log('Calling supabase update with:', { id, normalizedUpdates });
       const { error } = await supabase
         .from('atoms')
         .update(normalizedUpdates)
@@ -414,11 +417,13 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         console.error('Error updating atom:', error.message, error);
         throw error;
       }
+      console.log('Supabase update successful');
 
       const atoms = get().atoms.map((atom: Atom) =>
         atom.id === id ? { ...atom, ...normalizedUpdates } : atom
       );
       set({ atoms });
+      console.log('Successfully updated atom in store');
     } catch (error) {
       console.error('Failed to update atom:', error);
     }

@@ -182,10 +182,13 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
       setEditTitle(currentAtom.title);
       setEditDescription(currentAtom.description || '');
       setEditCreators(currentAtom.creator_name ? currentAtom.creator_name.split(',').map(s => s.trim()).filter(Boolean) : []);
-      setEditTags(currentAtom.tags || []);
+      // Normalize tags to ensure consistency (lowercase, trimmed)
+      const normalizedTags = (currentAtom.tags || []).map(tag => tag.toLowerCase().trim()).filter(Boolean);
+      setEditTags(normalizedTags);
       setIsFlagged(currentAtom.flag_for_deletion || false);
       setEditSourceUrl(currentAtom.media_source_link || '');
       setEditExternalLink(currentAtom.link || '');
+      setEditType(currentAtom.content_type || 'image');
     }
   }, [currentAtom, forceUpdate]);
 
@@ -355,9 +358,23 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   };
 
   const handleSaveEdits = async () => {
-    if (!editTitle || !currentAtom) return;
+    if (!currentAtom) {
+      console.log('No currentAtom, cannot save');
+      return;
+    }
     try {
       setIsSaving(true);
+      console.log('handleSaveEdits called, saving edits with data:', {
+        id: currentAtom.id,
+        title: editTitle,
+        tags: editTags,
+        description: editDescription,
+        creator_name: editCreators.join(', '),
+        media_source_link: editSourceUrl,
+        link: editExternalLink,
+        content_type: editType
+      });
+      
       // Ensure each creator exists individually
       for (const creatorName of editCreators) {
         if (!creators.find(c => c.name === creatorName)) {
@@ -378,7 +395,13 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
         link: editExternalLink,
         content_type: editType, // <-- ensure type is updated
       });
-      setIsEditing(false);
+      console.log('Successfully saved edits');
+      // Close all individual edit states
+      setIsEditingTitle(false);
+      setIsEditingDescription(false);
+      setIsEditingTags(false);
+      setIsEditingSourceLink(false);
+      setIsEditingExternalLink(false);
     } catch (error) {
       console.error('Error saving edits:', error);
     } finally {
@@ -386,22 +409,83 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
     }
   };
 
+  // Simple tag-only save function
+  const handleSaveTags = async () => {
+    if (!currentAtom) {
+      console.log('No currentAtom in handleSaveTags');
+      return;
+    }
+    try {
+      setIsSaving(true);
+      console.log('handleSaveTags called, saving tags only:', editTags);
+      
+      // Test basic database connection first
+      console.log('Testing database connection...');
+      const { data: testData, error: testError } = await supabase
+        .from('atoms')
+        .select('id')
+        .eq('id', currentAtom.id)
+        .single();
+      
+      if (testError) {
+        console.error('Database connection test failed:', testError);
+        throw testError;
+      }
+      console.log('Database connection test successful:', testData);
+      
+      // Ensure tags exist
+      for (const tag of editTags) {
+        if (!tags.find(t => t.name === tag)) {
+          console.log('Adding new tag:', tag);
+          await addTag({ name: tag, count: 1 });
+        }
+      }
+      
+      // Update only tags
+      console.log('Calling updateAtom with tags:', editTags);
+      await updateAtom(currentAtom.id, {
+        tags: editTags
+      });
+      
+      console.log('Tags saved successfully');
+      setIsEditingTags(false);
+    } catch (error) {
+      console.error('Error saving tags:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleTagClick = (tagName: string) => {
-    if (!editTags.includes(tagName)) {
-      setEditTags([...editTags, tagName]);
+    const normalizedTagName = tagName.toLowerCase().trim();
+    console.log('Adding tag:', normalizedTagName, 'to current tags:', editTags);
+    if (!editTags.includes(normalizedTagName)) {
+      const newTags = [...editTags, normalizedTagName];
+      setEditTags(newTags);
       setTagSearch(""); // Only clear after adding
+      console.log('Updated tags:', newTags);
     }
   };
 
   const handleCreateTag = () => {
-    if (tagSearch && !tags.find(t => t.name === tagSearch)) {
-      setEditTags([...editTags, tagSearch]);
-      setTagSearch(""); // Only clear after adding
+    if (tagSearch) {
+      const normalizedTagName = tagSearch.toLowerCase().trim();
+      console.log('Creating new tag:', normalizedTagName);
+      if (!editTags.includes(normalizedTagName)) {
+        const newTags = [...editTags, normalizedTagName];
+        setEditTags(newTags);
+        setTagSearch(""); // Only clear after adding
+        console.log('Created and added tag:', newTags);
+      }
     }
   };
 
   const handleRemoveTag = (tag: string) => {
-    setEditTags(editTags.filter(t => t !== tag));
+    const normalizedTag = tag.toLowerCase().trim();
+    console.log('Removing tag:', normalizedTag, 'from current tags:', editTags);
+    const newTags = editTags.filter(t => t.toLowerCase().trim() !== normalizedTag);
+    setEditTags(newTags);
+    console.log('Updated tags after removal:', newTags);
   };
 
   const handleTagSelect = (tag: string) => {
@@ -535,13 +619,13 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   const filteredTags = tags
     .filter(tag => 
       tag.name.toLowerCase().includes(tagSearch.toLowerCase()) &&
-      !editTags.includes(tag.name)
+      !editTags.includes(tag.name.toLowerCase())
     )
     .slice(0, 12);
 
   const showCreateTag = tagSearch && 
     !tags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) &&
-    !editTags.includes(tagSearch);
+    !editTags.includes(tagSearch.toLowerCase());
 
   // Debug output for image rendering - REMOVED FOR PERFORMANCE
   // console.log('DetailView debug:', {
@@ -691,6 +775,72 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                       </div>
                     </div>
 
+                    {/* General Save Button - appears when any field is being edited */}
+                    {(isEditingTitle || isEditingDescription || isEditingTags || isEditingSourceLink || isEditingExternalLink) && (
+                      <div className="flex gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <Button
+                          onClick={async () => {
+                            console.log('General save button clicked!', { 
+                              id: currentAtom.id, 
+                              title: editTitle,
+                              description: editDescription,
+                              tags: editTags,
+                              sourceLink: editSourceUrl,
+                              externalLink: editExternalLink
+                            });
+                            try {
+                              setIsSaving(true);
+                              await updateAtom(currentAtom.id, {
+                                title: editTitle,
+                                description: editDescription,
+                                tags: editTags,
+                                media_source_link: editSourceUrl,
+                                link: editExternalLink
+                              });
+                              // Refresh atoms to get updated data
+                              await fetchAtoms();
+                              // Force re-render to sync with updated atom data
+                              setForceUpdate(prev => prev + 1);
+                              console.log('General save successful');
+                              // Close all edit states
+                              setIsEditingTitle(false);
+                              setIsEditingDescription(false);
+                              setIsEditingTags(false);
+                              setIsEditingSourceLink(false);
+                              setIsEditingExternalLink(false);
+                            } catch (error) {
+                              console.error('Error saving changes:', error);
+                            } finally {
+                              setIsSaving(false);
+                            }
+                          }}
+                          size="sm"
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          {isSaving ? 'Saving...' : 'Save All Changes'}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            // Reset all edit states
+                            setEditTitle(currentAtom?.title || '');
+                            setEditDescription(currentAtom?.description || '');
+                            setEditTags(currentAtom?.tags || []);
+                            setEditSourceLink(currentAtom?.media_source_link || '');
+                            setEditExternalLink(currentAtom?.link || '');
+                            setIsEditingTitle(false);
+                            setIsEditingDescription(false);
+                            setIsEditingTags(false);
+                            setIsEditingSourceLink(false);
+                            setIsEditingExternalLink(false);
+                          }}
+                          size="sm"
+                          className="bg-gray-500 text-white hover:bg-gray-600"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+
                     {/* Title */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -712,27 +862,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                             color="light"
                             inputSize="sm"
                           />
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                handleSaveEdits();
-                                setIsEditingTitle(false);
-                              }}
-                              size="sm"
-                              disabled={isSaving || !editTitle}
-                            >
-                              {isSaving ? 'Saving...' : 'Save'}
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setEditTitle(currentAtom?.title || '');
-                                setIsEditingTitle(false);
-                              }}
-                              size="sm"
-                              className="bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              Cancel
-                            </Button>
+                          <div className="text-sm text-gray-500">
+                            Use "Save All Changes" button above to save
                           </div>
                         </div>
                       ) : (
@@ -763,27 +894,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             rows={4}
                           />
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                handleSaveEdits();
-                                setIsEditingDescription(false);
-                              }}
-                              size="sm"
-                              disabled={isSaving}
-                            >
-                              {isSaving ? 'Saving...' : 'Save'}
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setEditDescription(currentAtom?.description || '');
-                                setIsEditingDescription(false);
-                              }}
-                              size="sm"
-                              className="bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              Cancel
-                            </Button>
+                          <div className="text-sm text-gray-500">
+                            Use "Save All Changes" button above to save
                           </div>
                         </div>
                       ) : (
@@ -818,27 +930,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                             color="light"
                             inputSize="sm"
                           />
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                handleSaveEdits();
-                                setIsEditingSourceLink(false);
-                              }}
-                              size="sm"
-                              disabled={isSaving}
-                            >
-                              {isSaving ? 'Saving...' : 'Save'}
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setEditSourceUrl(currentAtom?.media_source_link || '');
-                                setIsEditingSourceLink(false);
-                              }}
-                              size="sm"
-                              className="bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              Cancel
-                            </Button>
+                          <div className="text-sm text-gray-500">
+                            Use "Save All Changes" button above to save
                           </div>
                         </div>
                       ) : (
@@ -869,27 +962,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                             color="light"
                             inputSize="sm"
                           />
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                handleSaveEdits();
-                                setIsEditingExternalLink(false);
-                              }}
-                              size="sm"
-                              disabled={isSaving}
-                            >
-                              {isSaving ? 'Saving...' : 'Save'}
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setEditExternalLink(currentAtom?.link || '');
-                                setIsEditingExternalLink(false);
-                              }}
-                              size="sm"
-                              className="bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              Cancel
-                            </Button>
+                          <div className="text-sm text-gray-500">
+                            Use "Save All Changes" button above to save
                           </div>
                         </div>
                       ) : (
@@ -945,7 +1019,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                               ))}
                             </div>
                           )}
-                          {(tagSearch || showCreateTag) && (
+                          {(tagSearch || filteredTags.length > 0 || showCreateTag) && (
                             <div className="grid grid-cols-2 gap-2">
                               {filteredTags.map((tag) => (
                                 <Button
@@ -968,27 +1042,8 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                               )}
                             </div>
                           )}
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                handleSaveEdits();
-                                setIsEditingTags(false);
-                              }}
-                              size="sm"
-                              disabled={isSaving}
-                            >
-                              {isSaving ? 'Saving...' : 'Save'}
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setEditTags(currentAtom?.tags || []);
-                                setIsEditingTags(false);
-                              }}
-                              size="sm"
-                              className="bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              Cancel
-                            </Button>
+                          <div className="text-sm text-gray-500">
+                            Use "Save All Changes" button above to save
                           </div>
                         </div>
                       ) : (
