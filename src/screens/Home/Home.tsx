@@ -15,6 +15,7 @@ export const Home = (): JSX.Element => {
     fetchCreators, 
     fetchCategoryTags, 
     fetchDefaultCategory,
+    fetchFavoriteCreators,
     selectedTags, 
     toggleTag,
     defaultCategoryId,
@@ -22,14 +23,18 @@ export const Home = (): JSX.Element => {
     getCategoryTags,
     isTagDrawerCollapsed,
     setTagDrawerCollapsed,
-    selectedCreator,
-    setSelectedCreator
+    selectedCreators,
+    setSelectedCreators,
+    showOnlyFavorites,
+    setShowOnlyFavorites,
+    favoriteCreators
   } = useAtomStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedContentTypes, setSelectedContentTypes] = useState<string[]>([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isOrganizeOpen, setIsOrganizeOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [searchMode, setSearchMode] = useState<'search' | 'creators'>('search');
 
   useEffect(() => {
     const initializeData = async () => {
@@ -38,7 +43,8 @@ export const Home = (): JSX.Element => {
         fetchCategories(),
         fetchCreators(),
         fetchCategoryTags(),
-        fetchDefaultCategory()
+        fetchDefaultCategory(),
+        fetchFavoriteCreators()
       ]);
       await fetchAtoms();
       setInitialLoading(false);
@@ -48,10 +54,10 @@ export const Home = (): JSX.Element => {
   }, []);
 
   useEffect(() => {
-    if ((selectedTags.length > 0 || selectedCreator) && isTagDrawerCollapsed) {
+    if ((selectedTags.length > 0 || selectedCreators.length > 0) && isTagDrawerCollapsed) {
       setTagDrawerCollapsed(false);
     }
-  }, [selectedTags, selectedCreator, isTagDrawerCollapsed, setTagDrawerCollapsed]);
+  }, [selectedTags, selectedCreators, isTagDrawerCollapsed, setTagDrawerCollapsed]);
 
   useEffect(() => {
     const handleOpenAdd = () => setIsAddOpen(true);
@@ -66,7 +72,7 @@ export const Home = (): JSX.Element => {
     };
   }, []);
 
-  const hasFilters = selectedTags.length > 0 || selectedContentTypes.length > 0 || searchTerm || defaultCategoryId !== null || selectedCreator !== null;
+  const hasFilters = selectedTags.length > 0 || selectedContentTypes.length > 0 || searchTerm || defaultCategoryId !== null || selectedCreators.length > 0 || showOnlyFavorites;
 
   const handleContentTypeSelect = (type: string) => {
     setSelectedContentTypes(prev => {
@@ -111,8 +117,12 @@ export const Home = (): JSX.Element => {
               onSearchChange={(value) => setSearchTerm(value)}
               selectedContentTypes={selectedContentTypes}
               onContentTypeSelect={handleContentTypeSelect}
-              selectedCreator={selectedCreator}
-              onCreatorSelect={setSelectedCreator}
+              selectedCreators={selectedCreators}
+              onCreatorsSelect={setSelectedCreators}
+              showOnlyFavorites={showOnlyFavorites}
+              onShowOnlyFavoritesChange={setShowOnlyFavorites}
+              searchMode={searchMode}
+              onSearchModeChange={setSearchMode}
             />
 
             {hasFilters && (
@@ -148,16 +158,35 @@ export const Home = (): JSX.Element => {
                     Category: {selectedCategory.name}
                   </Button>
                 )}
-                {selectedCreator && (
+                {selectedCreators.map((creator) => (
                   <Button
+                    key={creator}
                     size="sm"
                     selected={true}
                     rightIcon={<XIcon className="w-4 h-4" />}
-                    onClick={() => setSelectedCreator(null)}
+                    onClick={() => setSelectedCreators(selectedCreators.filter(c => c !== creator))}
                   >
-                    Creator: {selectedCreator}
+                    Creator: {creator}
                   </Button>
-                )}
+                ))}
+                {showOnlyFavorites && favoriteCreators.map((creatorName) => (
+                  <Button
+                    key={creatorName}
+                    size="sm"
+                    selected={true}
+                    rightIcon={<XIcon className="w-4 h-4" />}
+                    onClick={() => {
+                      // If this is the last favorite, turn off showOnlyFavorites
+                      if (favoriteCreators.length === 1) {
+                        setShowOnlyFavorites(false);
+                      }
+                      // Remove from favorites
+                      useAtomStore.getState().toggleFavoriteCreator(creatorName);
+                    }}
+                  >
+                    {creatorName}
+                  </Button>
+                ))}
                 {selectedTags.map((tag) => (
                   <Button
                     key={tag}
@@ -176,7 +205,8 @@ export const Home = (): JSX.Element => {
               <GallerySection 
                 searchTerm={searchTerm}
                 selectedContentTypes={selectedContentTypes}
-                selectedCreator={selectedCreator}
+                selectedCreators={selectedCreators}
+                showOnlyFavorites={showOnlyFavorites}
               />
             </div>
           </div>
@@ -188,7 +218,11 @@ export const Home = (): JSX.Element => {
         <Organize 
           open={isOrganizeOpen} 
           onClose={() => setIsOrganizeOpen(false)} 
-          onCreatorSelect={setSelectedCreator}
+          onCreatorSelect={(creator) => {
+            if (!selectedCreators.includes(creator)) {
+              setSelectedCreators([...selectedCreators, creator]);
+            }
+          }}
         />
       </div>
     </div>

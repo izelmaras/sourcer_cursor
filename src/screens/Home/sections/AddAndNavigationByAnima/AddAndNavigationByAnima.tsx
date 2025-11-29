@@ -1,8 +1,9 @@
-import { ChevronDownIcon, ChevronRightIcon, Flag, ImageOff, FolderIcon, PlusIcon, FilterIcon, NewspaperIcon, BookAudioIcon as AudioIcon, BookIcon, HeartIcon, LightbulbIcon, ImageIcon, FileTextIcon, LinkIcon, FilmIcon, PlayCircleIcon, UtensilsIcon, MusicIcon, ListIcon, VideoIcon, X } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, Flag, ImageOff, FolderIcon, PlusIcon, FilterIcon, NewspaperIcon, BookAudioIcon as AudioIcon, BookIcon, HeartIcon, LightbulbIcon, ImageIcon, FileTextIcon, LinkIcon, FilmIcon, PlayCircleIcon, UtensilsIcon, MusicIcon, ListIcon, VideoIcon, X, UsersIcon, SearchIcon } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/button";
 import { colors } from "../../../../lib/design-tokens";
 import { SearchBar } from "../../../../components/ui/search-bar";
+import { CreatorDropdown } from "../../../../components/ui/creator-dropdown";
 import { useAtomStore } from "../../../../store/atoms";
 
 interface AddAndNavigationByAnimaProps {
@@ -11,8 +12,12 @@ interface AddAndNavigationByAnimaProps {
   onSearchChange: (value: string) => void;
   selectedContentTypes: string[];
   onContentTypeSelect: (type: string) => void;
-  selectedCreator: string | null;
-  onCreatorSelect: (creator: string | null) => void;
+  selectedCreators: string[];
+  onCreatorsSelect: (creators: string[]) => void;
+  showOnlyFavorites: boolean;
+  onShowOnlyFavoritesChange: (show: boolean) => void;
+  searchMode: 'search' | 'creators';
+  onSearchModeChange: (mode: 'search' | 'creators') => void;
 }
 
 
@@ -23,8 +28,12 @@ export const AddAndNavigationByAnima = ({
   onSearchChange,
   selectedContentTypes,
   onContentTypeSelect,
-  selectedCreator,
-  onCreatorSelect
+  selectedCreators,
+  onCreatorsSelect,
+  showOnlyFavorites,
+  onShowOnlyFavoritesChange,
+  searchMode,
+  onSearchModeChange
 }: AddAndNavigationByAnimaProps): JSX.Element => {
   const { 
     categories,
@@ -43,6 +52,7 @@ export const AddAndNavigationByAnima = ({
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
   const [isOtherTagsExpanded, setIsOtherTagsExpanded] = useState(false);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [creatorSearchTerm, setCreatorSearchTerm] = useState('');
 
   useEffect(() => {
     const initializeData = async () => {
@@ -118,13 +128,62 @@ export const AddAndNavigationByAnima = ({
       <div className="flex flex-col w-full gap-3">
         <div className="flex flex-col sm:flex-row w-full gap-2">
           <div className="relative flex-1 min-w-0 flex items-center gap-2">
-            <SearchBar
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              color="light"
-              className="w-full"
-            />
+            <div className="relative flex-1 min-w-0">
+              {/* Search Bar - works for both search and creator modes */}
+              <SearchBar
+                placeholder={searchMode === 'search' ? "Search" : "Search creators..."}
+                value={searchMode === 'search' ? searchTerm : creatorSearchTerm}
+                onChange={(e) => {
+                  if (searchMode === 'search') {
+                    onSearchChange(e.target.value);
+                  } else {
+                    setCreatorSearchTerm(e.target.value);
+                  }
+                }}
+                color="light"
+                className="w-full"
+              />
+
+              {/* Creator Dropdown - shown when in creator mode, positioned below search bar */}
+              {searchMode === 'creators' && (
+                <CreatorDropdown
+                  selectedCreators={selectedCreators}
+                  onCreatorsChange={onCreatorsSelect}
+                  showOnlyFavorites={showOnlyFavorites}
+                  onShowOnlyFavoritesChange={onShowOnlyFavoritesChange}
+                  compact={true}
+                  searchTerm={creatorSearchTerm}
+                  onSearchChange={setCreatorSearchTerm}
+                />
+              )}
+            </div>
+
+            {/* Toggle Button - moved to right */}
+            <button
+              onClick={() => {
+                const newMode = searchMode === 'search' ? 'creators' : 'search';
+                onSearchModeChange(newMode);
+                // Clear search when switching modes
+                if (newMode === 'creators') {
+                  setCreatorSearchTerm('');
+                } else {
+                  onSearchChange('');
+                }
+              }}
+              className={`w-14 h-14 flex items-center justify-center rounded-full border-2 transition-all duration-300 hover:scale-105 aspect-square ${
+                searchMode === 'creators'
+                  ? 'border-white/30 bg-white/15 text-white'
+                  : 'border-white/10 bg-white/5 hover:bg-white/8 text-white'
+              }`}
+              title={searchMode === 'search' ? 'Switch to creator search' : 'Switch to content search'}
+            >
+              {searchMode === 'search' ? (
+                <UsersIcon className="h-5 w-5" />
+              ) : (
+                <SearchIcon className="h-5 w-5" />
+              )}
+            </button>
+
             <div className="relative">
               <button
                 data-filter-button
@@ -143,7 +202,7 @@ export const AddAndNavigationByAnima = ({
                 )}
               </button>
               {isFilterDropdownOpen && (
-                <div data-filter-dropdown className="absolute top-full right-0 mt-2 bg-gray-400/50 backdrop-blur-sm border border-white rounded-3xl shadow-2xl z-50 min-w-48 max-h-64 overflow-y-auto">
+                <div data-filter-dropdown className="absolute top-full right-0 mt-2 backdrop-blur-xl border border-white/40 rounded-3xl shadow-2xl z-50 min-w-48 max-h-64 overflow-y-auto" style={{ backgroundColor: 'rgba(149, 153, 160, 0.95)' }}>
                   <div className="p-3">
                     {contentTypes.map(ct => (
                       <button

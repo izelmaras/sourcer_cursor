@@ -26,7 +26,8 @@ interface DetailProps {
   filteredAtoms: Atom[];
   searchTerm?: string;
   selectedContentTypes?: string[];
-  selectedCreator?: string | null;
+  selectedCreators?: string[];
+  showOnlyFavorites?: boolean;
 }
 
 const ZOOM_SETTINGS = {
@@ -35,10 +36,10 @@ const ZOOM_SETTINGS = {
   SCALE_STEP: 0.2,
 };
 
-export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, selectedContentTypes, selectedCreator }: DetailProps): JSX.Element => {
+export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, selectedContentTypes, selectedCreators = [], showOnlyFavorites = false }: DetailProps): JSX.Element => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { atoms: allAtoms, deleteAtom, updateAtom, addTag, addCreator, fetchTags, fetchCreators, tags, creators, toggleTag, addAtom, fetchAtoms, selectedTags, categories, getCategoryTags, defaultCategoryId } = useAtomStore();
+  const { atoms: allAtoms, deleteAtom, updateAtom, addTag, addCreator, fetchTags, fetchCreators, tags, creators, toggleTag, addAtom, fetchAtoms, selectedTags, categories, getCategoryTags, defaultCategoryId, favoriteCreators } = useAtomStore();
   
   const stableAtom = atom || allAtoms.find(a => a.id === Number(id));
   
@@ -69,13 +70,22 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
         atom.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (atom.tags && atom.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
       const matchesType = !selectedContentTypes || selectedContentTypes.length === 0 || selectedContentTypes.includes(atom.content_type);
-      const matchesCreator =
-        !selectedCreator ||
+      
+      // Multiple creators filter: atom matches if any selected creator is in atom's creator_name
+      const matchesCreator = selectedCreators.length === 0 || 
         (atom.creator_name &&
           atom.creator_name
             .split(',')
             .map(name => name.trim())
-            .includes(selectedCreator));
+            .some(creatorName => selectedCreators.includes(creatorName)));
+      
+      // Show only favorites filter: atom matches if any creator in atom's creator_name is in favorites
+      const matchesFavorites = !showOnlyFavorites ||
+        (atom.creator_name &&
+          atom.creator_name
+            .split(',')
+            .map(name => name.trim())
+            .some(creatorName => favoriteCreators.includes(creatorName)));
       const atomTags = atom.tags || [];
       const isInPrivateCategory = categories.some(category => 
         category.is_private && 
@@ -96,6 +106,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
       return matchesSearch && 
              matchesType && 
              matchesCreator &&
+             matchesFavorites &&
              !isInPrivateCategory &&
              !selectedTagsInPrivateCategories &&
              matchesDefaultCategory &&
@@ -106,7 +117,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
     
     stopTimer();
     return result;
-  }, [allAtoms, searchTerm, selectedContentTypes, selectedCreator, categories, selectedTags, defaultCategoryId]);
+  }, [allAtoms, searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites, favoriteCreators, categories, selectedTags, defaultCategoryId, getCategoryTags]);
   
   const currentIndex = useMemo(() => 
     actualFilteredAtoms.findIndex(a => a.id === stableAtom?.id),

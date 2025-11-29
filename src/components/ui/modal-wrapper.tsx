@@ -9,9 +9,13 @@ export const ModalWrapper = ({ children, className, ...props }: ModalWrapperProp
   return (
     <div
       className={cn(
-        'relative bg-white/10 backdrop-blur-sm rounded-[32px] shadow-2xl border border-white/20 overflow-hidden w-full',
+        'relative backdrop-blur-xl rounded-[32px] border border-white/40 overflow-hidden w-full',
         className
       )}
+      style={{ 
+        backgroundColor: 'rgba(149, 153, 160, 0.90)',
+        boxShadow: '0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.3)'
+      }}
       {...props}
     >
       {children}

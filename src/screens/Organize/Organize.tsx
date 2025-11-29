@@ -9,6 +9,7 @@ import { SearchBar } from "../../components/ui/search-bar";
 import { ModalWrapper } from "../../components/ui/modal-wrapper";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { PencilIcon, ArrowUpIcon, TrashIcon, PlusIcon, LockIcon, UnlockIcon, XIcon, LinkIcon, StarIcon } from "lucide-react";
+import { cn } from "../../lib/utils";
 import type { Database } from '../../types/supabase';
 
 interface OrganizeProps {
@@ -51,6 +52,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     fetchCreators,
     fetchCreatorTags,
     fetchCategoryTags,
+    fetchFavoriteCreators,
     addCategory,
     addTag,
     addCreator,
@@ -71,7 +73,9 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     getCreatorTags,
     toggleTag,
     setDefaultCategory,
-    defaultCategoryId
+    defaultCategoryId,
+    favoriteCreators,
+    toggleFavoriteCreator
   } = useAtomStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,12 +110,13 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
         fetchTags(),
         fetchCreators(),
         fetchCreatorTags(),
-        fetchCategoryTags()
+        fetchCategoryTags(),
+        fetchFavoriteCreators()
       ]);
     };
     
     initializeData();
-  }, [fetchCategories, fetchTags, fetchCreators, fetchCreatorTags, fetchCategoryTags]);
+  }, [fetchCategories, fetchTags, fetchCreators, fetchCreatorTags, fetchCategoryTags, fetchFavoriteCreators]);
 
   useEffect(() => {
     setSelectedType(initialType);
@@ -502,11 +507,33 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
       );
     }
 
+    const isFavorite = selectedType === OrganizeType.Creators && favoriteCreators.includes(item.name);
+
     return (
       <div className="flex-grow text-left cursor-pointer hover:text-white/80" onClick={onItemClick}>
         <div className="flex items-center gap-2">
           <span className="text-white">{item.name}</span>
           {selectedType === OrganizeType.Categories && isDefaultCategory && <StarIcon className="h-4 w-4 text-yellow-400" />}
+          {selectedType === OrganizeType.Creators && (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                await toggleFavoriteCreator(item.name);
+              }}
+              className={cn(
+                "p-1 rounded transition-colors",
+                isFavorite
+                  ? "text-yellow-400 hover:bg-white/20"
+                  : "text-white/40 hover:text-yellow-400 hover:bg-white/10"
+              )}
+              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            >
+              <StarIcon className={cn(
+                "h-4 w-4",
+                isFavorite && "fill-yellow-400"
+              )} />
+            </button>
+          )}
           {((selectedType === OrganizeType.Categories || selectedType === OrganizeType.Creators) && 'count' in item && typeof item.count === 'number') && (
             <span className="text-white/60 text-sm">({item.count || 0} instances)</span>
           )}
@@ -899,7 +926,10 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
           <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg px-4 sm:px-6 outline-none">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl p-6">
+            <div className="backdrop-blur-xl border border-white/40 rounded-3xl p-6" style={{ 
+              backgroundColor: 'rgba(149, 153, 160, 0.90)',
+              boxShadow: '0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.3)'
+            }}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-white">Delete {selectedType.slice(0, -1)}</h2>
                 <button
@@ -944,7 +974,10 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
               transform: modalPosition ? 'none' : 'translate(-50%, -50%)'
             }}
           >
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl p-6">
+            <div className="backdrop-blur-xl border border-white/40 rounded-3xl p-6" style={{ 
+              backgroundColor: 'rgba(149, 153, 160, 0.90)',
+              boxShadow: '0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.3)'
+            }}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white flex-1">
                   Assign "{selectedTagForAssignment?.name}" to:

@@ -20,15 +20,17 @@ type Atom = Database['public']['Tables']['atoms']['Row'];
 interface GallerySectionProps {
   searchTerm: string;
   selectedContentTypes: string[];
-  selectedCreator: string | null;
+  selectedCreators: string[];
+  showOnlyFavorites: boolean;
 }
 
-const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selectedCreator }: { 
+const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites }: { 
   atoms: Atom[], 
   onSelect: (atom: Atom) => void,
   searchTerm?: string,
   selectedContentTypes?: string[],
-  selectedCreator?: string | null
+  selectedCreators?: string[],
+  showOnlyFavorites?: boolean
 }) => {
   const navigate = useNavigate();
   const { deletingIds, updateAtom, fetchAtoms } = useAtomStore();
@@ -51,7 +53,8 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     return JSON.stringify({
       searchTerm,
       selectedContentTypes,
-      selectedCreator
+      selectedCreators,
+      showOnlyFavorites
     });
   };
 
@@ -126,7 +129,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       setExpandedAtomId(null); // Close expanded view when filters change
       lastLoadTimeRef.current = 0; // Reset rate limiting
     }
-  }, [searchTerm, selectedContentTypes, selectedCreator]);
+  }, [searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites]);
 
   const handleAtomClick = (atom: Atom) => {
     if (expandedAtomId === atom.id) {
@@ -398,8 +401,8 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
 
 Gallery.displayName = 'Gallery';
 
-export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreator }: GallerySectionProps): JSX.Element => {
-  const { atoms, selectedTags, categories, getCategoryTags, defaultCategoryId } = useAtomStore();
+export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites }: GallerySectionProps): JSX.Element => {
+  const { atoms, selectedTags, categories, getCategoryTags, defaultCategoryId, favoriteCreators } = useAtomStore();
   const [selectedAtom, setSelectedAtom] = useState<Atom | null>(null);
 
   const filteredAtoms = useMemo(() => {
@@ -409,13 +412,22 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
         atom.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (atom.tags && atom.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
       const matchesType = selectedContentTypes.length === 0 || selectedContentTypes.includes(atom.content_type);
-      const matchesCreator =
-        !selectedCreator ||
+      
+      // Multiple creators filter: atom matches if any selected creator is in atom's creator_name
+      const matchesCreator = selectedCreators.length === 0 || 
         (atom.creator_name &&
           atom.creator_name
             .split(',')
             .map(name => name.trim())
-            .includes(selectedCreator));
+            .some(creatorName => selectedCreators.includes(creatorName)));
+      
+      // Show only favorites filter: atom matches if any creator in atom's creator_name is in favorites
+      const matchesFavorites = !showOnlyFavorites ||
+        (atom.creator_name &&
+          atom.creator_name
+            .split(',')
+            .map(name => name.trim())
+            .some(creatorName => favoriteCreators.includes(creatorName)));
       const atomTags = atom.tags || [];
       const isInPrivateCategory = categories.some(category => 
         category.is_private && 
@@ -438,6 +450,7 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
       return matchesSearch && 
              matchesType && 
              matchesCreator &&
+             matchesFavorites &&
              !isInPrivateCategory &&
              !selectedTagsInPrivateCategories &&
              matchesDefaultCategory &&
@@ -445,7 +458,7 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
              matchesNoTag &&
              (selectedTags.length === 0 || selectedTags.every(tag => tag === 'flagged' || tag === 'no-tag' || atomTags.includes(tag)));
     });
-  }, [atoms, searchTerm, selectedContentTypes, selectedCreator, selectedTags, categories, defaultCategoryId]);
+  }, [atoms, searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites, favoriteCreators, selectedTags, categories, defaultCategoryId, getCategoryTags]);
 
   return (
     <Gallery 
@@ -453,7 +466,8 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
       onSelect={setSelectedAtom}
       searchTerm={searchTerm}
       selectedContentTypes={selectedContentTypes}
-      selectedCreator={selectedCreator}
+      selectedCreators={selectedCreators}
+      showOnlyFavorites={showOnlyFavorites}
     />
   );
 };

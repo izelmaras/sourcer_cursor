@@ -79,7 +79,9 @@ interface AtomStore {
   categoryTags: CategoryTag[];
   creatorTags: CreatorTag[];
   selectedTags: string[];
-  selectedCreator: string | null;
+  selectedCreators: string[];
+  favoriteCreators: string[];
+  showOnlyFavorites: boolean;
   loading: boolean;
   deletingIds: number[];
   defaultCategoryId: number | null;
@@ -95,7 +97,10 @@ interface AtomStore {
   fetchCreatorTags: () => Promise<void>;
   fetchDefaultCategory: () => Promise<void>;
   setDefaultCategory: (categoryId: number | null) => Promise<void>;
-  setSelectedCreator: (creator: string | null) => void;
+  fetchFavoriteCreators: () => Promise<void>;
+  toggleFavoriteCreator: (creatorName: string) => Promise<void>;
+  setSelectedCreators: (creators: string[]) => void;
+  setShowOnlyFavorites: (show: boolean) => void;
   addAtom: (atom: Omit<Database['public']['Tables']['atoms']['Insert'], 'id'>) => Promise<void>;
   updateAtom: (id: number, updates: Partial<Database['public']['Tables']['atoms']['Update']>) => Promise<void>;
   addTag: (tag: Omit<Database['public']['Tables']['tags']['Insert'], 'id'>) => Promise<void>;
@@ -130,7 +135,9 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   categoryTags: [],
   creatorTags: [],
   selectedTags: [],
-  selectedCreator: null,
+  selectedCreators: [],
+  favoriteCreators: [],
+  showOnlyFavorites: false,
   loading: false,
   deletingIds: [],
   defaultCategoryId: null,
@@ -321,8 +328,67 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
     }
   },
 
-  setSelectedCreator: (creator: string | null) => {
-    set({ selectedCreator: creator });
+  setSelectedCreators: (creators: string[]) => {
+    set({ selectedCreators: creators });
+  },
+
+  fetchFavoriteCreators: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'favorite_creators')
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No favorite creators found, this is expected for new installations
+          console.log('No favorite creators set');
+          set({ favoriteCreators: [] });
+          return;
+        }
+        console.error('Error fetching favorite creators:', error.message, error);
+        return;
+      }
+
+      const creatorNames = data?.value?.creatorNames || [];
+      set({ favoriteCreators: Array.isArray(creatorNames) ? creatorNames : [] });
+    } catch (error) {
+      console.error('Failed to fetch favorite creators:', error);
+      set({ favoriteCreators: [] });
+    }
+  },
+
+  toggleFavoriteCreator: async (creatorName: string) => {
+    try {
+      const currentFavorites = get().favoriteCreators;
+      const isFavorite = currentFavorites.includes(creatorName);
+      const newFavorites = isFavorite
+        ? currentFavorites.filter(name => name !== creatorName)
+        : [...currentFavorites, creatorName];
+
+      const { error } = await supabase
+        .from('settings')
+        .upsert({
+          key: 'favorite_creators',
+          value: { creatorNames: newFavorites },
+        }, {
+          onConflict: 'key'
+        });
+
+      if (error) {
+        console.error('Error toggling favorite creator:', error.message, error);
+        throw error;
+      }
+
+      set({ favoriteCreators: newFavorites });
+    } catch (error) {
+      console.error('Failed to toggle favorite creator:', error);
+    }
+  },
+
+  setShowOnlyFavorites: (show: boolean) => {
+    set({ showOnlyFavorites: show });
   },
 
   addAtom: async (atom) => {
