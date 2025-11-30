@@ -310,7 +310,12 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                   <div className="mb-2 flex justify-center">
                     <LiveLinkPreview url={atom.link || ""} height={240}>
                       {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
-                        <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
+                        <img 
+                          src={(atom as any).ogImage} 
+                          alt={atom.title} 
+                          className="w-full h-40 object-cover rounded" 
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
                       ) : atom.link ? (
                         <img
                           src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}

@@ -658,6 +658,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                       }
                     }
                   }}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    img.src = '/placeholder-image.png';
+                    img.onerror = null; // Prevent infinite loop if placeholder also fails
+                  }}
                 />
               )}
             </div>

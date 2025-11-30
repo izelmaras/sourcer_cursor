@@ -9,6 +9,7 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 export const LazyImage = ({ src, alt, className, ...props }: LazyImageProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isInView, setIsInView] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -29,6 +30,21 @@ export const LazyImage = ({ src, alt, className, ...props }: LazyImageProps) => 
     return () => observer.disconnect();
   }, []);
 
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setHasError(true);
+    setIsLoading(false);
+    const img = e.currentTarget;
+    img.style.display = 'none';
+  };
+
+  if (hasError) {
+    return (
+      <div className="relative w-full h-full bg-gray-100 flex items-center justify-center">
+        <div className="text-gray-400 text-sm">Image unavailable</div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full bg-gray-100">
       {isLoading && (
@@ -44,6 +60,7 @@ export const LazyImage = ({ src, alt, className, ...props }: LazyImageProps) => 
           className
         )}
         onLoad={() => setIsLoading(false)}
+        onError={handleError}
         {...props}
       />
     </div>

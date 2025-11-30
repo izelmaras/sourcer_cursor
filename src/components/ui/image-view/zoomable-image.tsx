@@ -21,6 +21,11 @@ export function ZoomableImage({
   onLoad,
   className
 }: ZoomableImageProps) {
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const img = e.currentTarget;
+    img.style.display = 'none';
+  };
+
   return (
     <img
       src={src}
@@ -36,6 +41,7 @@ export function ZoomableImage({
         transformOrigin: 'center',
       }}
       onLoad={onLoad}
+      onError={handleError}
       draggable={false}
     />
   );
