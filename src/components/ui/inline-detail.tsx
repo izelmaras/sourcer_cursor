@@ -12,7 +12,7 @@ import { supabase } from '../../lib/supabase';
 import { VideoPlayer } from "./video-player";
 import { uploadMedia } from '../../lib/storage';
 import { isVideoUrl } from '../../lib/utils';
-import { backgrounds, borders, text, icons, radius, tags, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
+import { backgrounds, borders, text, icons, radius, tags as tagStyles, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -458,7 +458,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     {editCreators.map((creator, index) => (
                       <span
                         key={index}
-                        className={tags.variants.removable.className}
+                        className={tagStyles?.variants?.removable?.className || 'px-2 py-1 text-xs bg-white/10 backdrop-blur-sm text-white rounded-md flex items-center gap-1 hover:bg-white/20 transition-colors'}
                       >
                         {creator}
                         <button
@@ -517,7 +517,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     {editTags.map((tag, index) => (
                       <span
                         key={index}
-                        className={tags.variants.removable.className}
+                        className={tagStyles?.variants?.removable?.className || 'px-2 py-1 text-xs bg-white/10 backdrop-blur-sm text-white rounded-md flex items-center gap-1 hover:bg-white/20 transition-colors'}
                       >
                         {tag}
                         <button
