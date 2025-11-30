@@ -11,3 +11,4 @@
 -- This migration documents the favorite_creators setting usage
 -- The setting will be stored as: { "creatorNames": ["Creator 1", "Creator 2", ...] }
 
+

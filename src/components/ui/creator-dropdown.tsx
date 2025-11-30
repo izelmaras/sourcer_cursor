@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SearchIcon, XIcon, StarIcon, ChevronDownIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAtomStore } from '../../store/atoms';
+import { backgrounds, borders, text, icons, radius, dropdowns, utilities } from '../../lib/design-tokens';
+import { SearchBar } from './search-bar';
 
 interface CreatorDropdownProps {
   selectedCreators: string[];
@@ -104,12 +106,8 @@ export const CreatorDropdown: React.FC<CreatorDropdownProps> = ({
         {!compact && (
           <div className="relative">
             <div className="relative flex items-center">
-              <div className="absolute left-3 pointer-events-none">
-                <SearchIcon className="h-5 w-5 text-white/80" />
-              </div>
-              <input
+              <SearchBar
                 ref={inputRef}
-                type="text"
                 placeholder="Search creators..."
                 value={searchTerm}
                 onChange={(e) => {
@@ -117,20 +115,14 @@ export const CreatorDropdown: React.FC<CreatorDropdownProps> = ({
                   setIsOpen(true);
                 }}
                 onFocus={() => setIsOpen(true)}
-                className={cn(
-                  "w-full pl-10 pr-10 py-2.5 rounded-2xl border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-0",
-                  "bg-white/5 backdrop-blur-sm border-white/10",
-                  "text-white placeholder-white/60",
-                  "focus:bg-white/8 focus:border-white/20 focus:ring-white/20",
-                  "hover:bg-white/6 hover:border-white/15"
-                )}
+                className="pr-10"
               />
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="absolute right-3 p-1 hover:bg-white/10 rounded transition-colors"
+                className={`absolute right-3 p-1 ${backgrounds.hover.layer3} ${radius.md} ${utilities.transition.colors}`}
               >
                 <ChevronDownIcon className={cn(
-                  "h-4 w-4 text-white/80 transition-transform",
+                  `h-4 w-4 ${icons.secondary} transition-transform`,
                   isOpen && "transform rotate-180"
                 )} />
               </button>
@@ -143,7 +135,7 @@ export const CreatorDropdown: React.FC<CreatorDropdownProps> = ({
 
       {/* Dropdown Menu - Shared for both modes, positioned relative to outer container */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 backdrop-blur-xl border border-white/40 rounded-3xl shadow-2xl max-h-64 overflow-y-auto" style={{ backgroundColor: 'rgba(149, 153, 160, 0.95)' }}>
+        <div className={`absolute z-50 w-full mt-2 ${dropdowns.base.className} max-h-64 overflow-y-auto`} style={dropdowns.base.style}>
           <div className="p-2">
             {/* Show Only Favorites Toggle */}
             <button
@@ -152,15 +144,19 @@ export const CreatorDropdown: React.FC<CreatorDropdownProps> = ({
                 setIsOpen(false);
               }}
               className={cn(
-                "w-full flex items-center gap-2 px-4 py-2 rounded-2xl text-left transition-all duration-300 mb-2",
+                "w-full flex items-center gap-2 px-4 py-2",
+                radius.xl,
+                "text-left",
+                utilities.transition.all,
+                "mb-2",
                 showOnlyFavorites
-                  ? 'bg-white/40 text-white shadow-lg border border-white/50'
-                  : 'text-white hover:bg-white/20 hover:text-white'
+                  ? `${backgrounds.selected.layer2} ${text.primary} ${utilities.shadow.lg} ${borders.secondary}`
+                  : `${text.primary} ${backgrounds.hover.layer2} ${text.hover}`
               )}
             >
               <StarIcon className={cn(
                 "h-4 w-4",
-                showOnlyFavorites ? "fill-yellow-400 text-yellow-400" : "text-white/60"
+                showOnlyFavorites ? "fill-yellow-400 text-yellow-400" : icons.muted
               )} />
               <span className="text-sm font-medium">Show only favorites</span>
             </button>
@@ -170,11 +166,11 @@ export const CreatorDropdown: React.FC<CreatorDropdownProps> = ({
               filteredCreators.map((creator) => (
                 <div
                   key={creator.id}
-                  className="flex items-center justify-between px-4 py-2 rounded-2xl hover:bg-white/20 transition-colors group"
+                  className={`flex items-center justify-between px-4 py-2 ${radius.xl} ${backgrounds.hover.layer2} ${utilities.transition.colors} group`}
                 >
                   <button
                     onClick={() => handleCreatorToggle(creator.name)}
-                    className="flex-1 text-left text-white text-sm hover:text-white"
+                    className={`flex-1 text-left ${text.primary} text-sm ${text.hover}`}
                   >
                     {creator.name}
                   </button>
@@ -184,7 +180,7 @@ export const CreatorDropdown: React.FC<CreatorDropdownProps> = ({
                       "p-1 rounded transition-colors",
                       isFavorite(creator.name)
                         ? "text-yellow-400 hover:bg-white/20"
-                        : "text-white/40 hover:text-yellow-400 hover:bg-white/10"
+                        : `${icons.disabled} hover:text-yellow-400 ${backgrounds.hover.layer3}`
                     )}
                     title={isFavorite(creator.name) ? "Remove from favorites" : "Add to favorites"}
                   >
@@ -196,11 +192,11 @@ export const CreatorDropdown: React.FC<CreatorDropdownProps> = ({
                 </div>
               ))
             ) : searchTerm ? (
-              <div className="px-4 py-2 text-white/60 text-sm text-center">
+              <div className={`px-4 py-2 ${text.muted} text-sm text-center`}>
                 No creators found
               </div>
             ) : (
-              <div className="px-4 py-2 text-white/60 text-sm text-center">
+              <div className={`px-4 py-2 ${text.muted} text-sm text-center`}>
                 {selectedCreators.length === creators.length 
                   ? "All creators selected" 
                   : "Start typing to search creators"}

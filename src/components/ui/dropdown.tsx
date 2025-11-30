@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { radius, utilities, backgrounds, borders, text } from '../../lib/design-tokens';
 
 interface DropdownProps {
   children: React.ReactNode;
@@ -12,10 +13,13 @@ export const Dropdown = ({ children, className, color = 'light' }: DropdownProps
   return (
     <div
       className={cn(
-        'rounded-[12px] shadow-lg outline-none transition-colors',
+        radius.input,
+        utilities.shadow.lg,
+        'outline-none',
+        utilities.transition.colors,
         isDark
           ? 'bg-gray-900 text-white border border-gray-700 focus:ring-2 focus:ring-gray-700'
-          : 'bg-white text-gray-900 border border-gray-200 focus:ring-2 focus:ring-gray-900',
+          : `${backgrounds.light.base} ${text.light.primary} ${borders.light.primary} ${borders.focus.secondary}`,
         className
       )}
       tabIndex={0}

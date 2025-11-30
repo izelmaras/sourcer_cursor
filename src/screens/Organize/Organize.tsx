@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 import { Button } from "../../components/ui/button";
+import { IconButton } from "../../components/ui/icon-button";
 import { Input } from "../../components/ui/input";
 import { useAtomStore } from "../../store/atoms";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -11,6 +12,7 @@ import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { PencilIcon, ArrowUpIcon, TrashIcon, PlusIcon, LockIcon, UnlockIcon, XIcon, LinkIcon, StarIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 import type { Database } from '../../types/supabase';
+import { backgrounds, borders, text, icons, radius, tags as tagStyles, utilities } from '../../lib/design-tokens';
 
 interface OrganizeProps {
   open: boolean;
@@ -163,23 +165,21 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
       categoryTags.forEach(tag => categorizedTagIds.add(tag.id));
     });
     
-    // Uncategorized tags are those not assigned to any category
-    const uncategorizedTags = tags.filter(tag => !categorizedTagIds.has(tag.id));
+    // Filter tags by search term if provided
+    const searchLower = searchTerm.toLowerCase();
+    const filterBySearch = (tagList: typeof tags) => {
+      if (!searchTerm) return tagList;
+      return tagList.filter(tag => tag.name.toLowerCase().includes(searchLower));
+    };
     
-    // Categorized tags grouped by their categories
+    // Uncategorized tags are those not assigned to any category
+    const uncategorizedTags = filterBySearch(tags.filter(tag => !categorizedTagIds.has(tag.id)));
+    
+    // Categorized tags grouped by their categories, filtered by search
     const categorizedTags = categories.map(category => ({
       category,
-      tags: getCategoryTags(category.id)
+      tags: filterBySearch(getCategoryTags(category.id))
     })).filter(group => group.tags.length > 0);
-    
-    // Debug logging - REMOVED FOR PERFORMANCE
-    // console.log('Total tags:', tags.length);
-    // console.log('Categorized tag IDs:', Array.from(categorizedTagIds));
-    // console.log('Uncategorized tags:', uncategorizedTags.map(t => t.name));
-    // console.log('Categorized tags by category:', categorizedTags.map(ct => ({
-    //   category: ct.category.name,
-    //   tags: ct.tags.map(t => t.name)
-    // })));
     
     return { uncategorizedTags, categorizedTags };
   };
@@ -433,8 +433,8 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     !tags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) &&
     !selectedTags.includes(tagSearch);
 
-  const buttonStyle = "bg-white/5 backdrop-blur-sm text-white border border-white/10 shadow-sm hover:bg-white/8";
-  const inputStyle = "bg-white/5 backdrop-blur-sm text-white border border-white/10 focus:ring-2 focus:ring-white/20";
+  const buttonStyle = `${backgrounds.layer2} ${text.primary} ${borders.tertiary} shadow-sm ${backgrounds.hover.layer4}`;
+  const inputStyle = `${backgrounds.layer2} ${text.primary} ${borders.tertiary} ${borders.focus.secondary}`;
 
   // --- ORGANIZE LIST ITEM COMPONENT ---
   interface OrganizeListItemProps {
@@ -524,7 +524,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                 "p-1 rounded transition-colors",
                 isFavorite
                   ? "text-yellow-400 hover:bg-white/20"
-                  : "text-white/40 hover:text-yellow-400 hover:bg-white/10"
+                  : `${text.disabled} hover:text-yellow-400 ${backgrounds.hover.layer3}`
               )}
               title={isFavorite ? "Remove from favorites" : "Add to favorites"}
             >
@@ -535,20 +535,20 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
             </button>
           )}
           {((selectedType === OrganizeType.Categories || selectedType === OrganizeType.Creators) && 'count' in item && typeof item.count === 'number') && (
-            <span className="text-white/60 text-sm">({item.count || 0} instances)</span>
+            <span className={`${text.muted} text-sm`}>({item.count || 0} instances)</span>
           )}
         </div>
         {selectedType === OrganizeType.Creators && (
           <>
             <div className="flex flex-wrap gap-2 mt-1">
               {'link_1' in item && item.link_1 && (
-                <a href={item.link_1} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-white/70 hover:text-white"><LinkIcon className="h-3 w-3" />Link 1</a>
+                <a href={item.link_1} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 text-sm ${text.tertiary} ${text.hover}`}><LinkIcon className={`h-3 w-3 ${icons.primary}`} />Link 1</a>
               )}
               {'link_2' in item && item.link_2 && (
-                <a href={item.link_2} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-white/70 hover:text-white"><LinkIcon className="h-3 w-3" />Link 2</a>
+                <a href={item.link_2} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 text-sm ${text.tertiary} ${text.hover}`}><LinkIcon className={`h-3 w-3 ${icons.primary}`} />Link 2</a>
               )}
               {'link_3' in item && item.link_3 && (
-                <a href={item.link_3} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-white/70 hover:text-white"><LinkIcon className="h-3 w-3" />Link 3</a>
+                <a href={item.link_3} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 text-sm ${text.tertiary} ${text.hover}`}><LinkIcon className={`h-3 w-3 ${icons.primary}`} />Link 3</a>
               )}
             </div>
             {/* Show tags under creator links */}
@@ -556,7 +556,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
               {getCreatorTags(item.id).map(tag => (
                 <button
                   key={tag.id}
-                  className="px-2 py-1 rounded bg-white/10 text-white text-xs hover:bg-white/20 transition-colors border border-white/10 max-w-32 truncate"
+                  className={`${tagStyles?.variants?.clickable?.className || tagStyles?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors'} max-w-32 truncate`}
                   onClick={e => { e.stopPropagation(); toggleTag(tag.name); }}
                   type="button"
                   title={tag.name}
@@ -575,7 +575,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
     <Dialog.Root open={open} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl px-2 sm:px-6 outline-none max-h-[90vh] sm:max-h-[80vh]">
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl px-2 sm:px-6 outline-none max-h-[90vh] sm:max-h-[80vh] rounded-[32px]">
                       <ScrollArea className="max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
               <ModalWrapper className="max-h-[90vh] sm:max-h-[80vh] h-auto flex flex-col">
               <ModalHeader className="flex-none pb-4">
@@ -624,14 +624,18 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
               <ModalBody className="flex-1">
                 <div className="h-full flex flex-col gap-4">
                   <SearchBar
-                    placeholder={`Search ${selectedType.toLowerCase()}`}
+                    placeholder={
+                      selectedType === 'TagsByCategories' 
+                        ? 'Search tags...' 
+                        : `Search ${selectedType.toLowerCase()}...`
+                    }
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     color="light"
                   />
                   {isAddDialogOpen && (
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-2 flex flex-col gap-2 border border-white/20">
-                      <div className="text-base font-medium text-white mb-2">
+                    <div className={`${backgrounds.layer1} ${radius.md} p-4 mb-2 flex flex-col gap-2 ${borders.secondary}`}>
+                      <div className={`text-base font-medium ${text.primary} mb-2`}>
                         {selectedType === 'Categories' ? 'Add Category' : selectedType === 'Tags' ? 'Add Tag' : 'Add Creator'}
                       </div>
                       <Input
@@ -675,7 +679,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                   {uncategorizedTags.map((tag) => (
                                     <button
                                       key={tag.id}
-                                      className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 transition-colors border border-white/20"
+                                      className={tagStyles?.variants?.clickable?.className || tagStyles?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors'}
                                       onClick={() => toggleTag(tag.name)}
                                       onContextMenu={(e) => handleTagRightClick(e, tag.id, tag.name)}
                                       title={`${tag.name} - Right click to assign to category`}
@@ -703,7 +707,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                   {tags.map((tag) => (
                                     <button
                                       key={tag.id}
-                                      className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 transition-colors border border-white/20"
+                                      className={tagStyles?.variants?.clickable?.className || tagStyles?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors'}
                                       onClick={() => toggleTag(tag.name)}
                                       title={tag.name}
                                     >
@@ -716,7 +720,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                             
                             {/* Empty state */}
                             {uncategorizedTags.length === 0 && categorizedTags.length === 0 && (
-                              <div className="text-center text-white/60 py-8">
+                              <div className={`text-center ${text.muted} py-8`}>
                                 <p>No tags found. Create some tags first!</p>
                               </div>
                             )}
@@ -728,7 +732,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                       filteredItems.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-2 last:mb-0 border border-white/20"
+                        className={`${backgrounds.layer1} ${radius.md} p-4 mb-2 last:mb-0 ${borders.secondary}`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <OrganizeListItem
@@ -762,12 +766,14 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                           {editingId !== item.id && (
                             <div className="flex flex-wrap gap-2 justify-end sm:justify-start">
                               {(isCategory(item) || isTag(item)) && (
-                                <Button
+                                <IconButton
                                   size="sm"
-                                  leftIcon={item.is_private ? <LockIcon className="h-4 w-4" /> : <UnlockIcon className="h-4 w-4" />}
                                   onClick={() => handleTogglePrivate(item.id, !!item.is_private)}
                                   className="flex-shrink-0"
-                                />
+                                  title={item.is_private ? "Make public" : "Make private"}
+                                >
+                                  {item.is_private ? <LockIcon className="h-4 w-4" /> : <UnlockIcon className="h-4 w-4" />}
+                                </IconButton>
                               )}
                               <Button
                                 size="sm"
@@ -777,43 +783,48 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                               >
                                 Tags
                               </Button>
-                              <Button
+                              <IconButton
                                 size="sm"
-                                leftIcon={<PencilIcon className="h-4 w-4" />}
                                 onClick={() => handleEdit(item.id, item.name, item)}
                                 className="flex-shrink-0"
-                              />
-                              <Button
+                                title="Edit"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </IconButton>
+                              <IconButton
                                 size="sm"
-                                leftIcon={<ArrowUpIcon className="h-4 w-4" />}
                                 onClick={() => {
                                   setMergeSourceId(item.id);
                                   setMergeTargetId(null);
                                   setMergeSearch('');
                                 }}
                                 className="flex-shrink-0"
-                              />
-                              <Button
+                                title="Merge"
+                              >
+                                <ArrowUpIcon className="h-4 w-4" />
+                              </IconButton>
+                              <IconButton
                                 size="sm"
-                                leftIcon={<TrashIcon className="h-4 w-4" />}
                                 onClick={() => handleDelete(item.id)}
                                 className="flex-shrink-0"
-                              />
+                                title="Delete"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </IconButton>
                             </div>
                           )}
                         </div>
                         {mergeSourceId === item.id && (
-                          <div className="mt-4 flex flex-col gap-2 bg-white/10 backdrop-blur-sm rounded p-3 border border-white/20">
-                                                          <Input
-                                placeholder={`Search target ${selectedType.toLowerCase()}`}
-                                value={mergeSearch}
-                                onChange={e => {
-                                  setMergeSearch(e.target.value);
-                                  setMergeTargetId(null);
-                                }}
-                                color="glass"
-                                className="w-full"
-                              />
+                          <div className={`mt-4 flex flex-col gap-2 ${backgrounds.layer1} rounded p-3 ${borders.secondary}`}>
+                            <SearchBar
+                              placeholder={`Search target ${selectedType.toLowerCase()}`}
+                              value={mergeSearch}
+                              onChange={e => {
+                                setMergeSearch(e.target.value);
+                                setMergeTargetId(null);
+                              }}
+                              className="w-full"
+                            />
                             <div className="max-h-32 overflow-y-auto">
                               {getItems()
                                 .filter(target =>
@@ -824,7 +835,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                 .map(target => (
                                   <div
                                     key={target.id}
-                                    className={`px-2 py-1 rounded cursor-pointer ${mergeTargetId === target.id ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/80'}`}
+                                    className={`px-2 py-1 rounded cursor-pointer ${mergeTargetId === target.id ? `${backgrounds.selected.layer2} ${text.primary}` : `${backgrounds.hover.layer3} ${text.secondary}`}`}
                                     onClick={() => setMergeTargetId(target.id)}
                                   >
                                     {target.name}
@@ -860,17 +871,20 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                             {selectedTags.length > 0 && (
                               <div className="flex flex-wrap gap-1.5">
                                 {selectedTags.map((tag) => (
-                                  <Button
+                                  <span
                                     key={tag}
-                                    size="sm"
-                                    rightIcon={<XIcon className="h-4 w-4 ml-1" />}
-                                    onClick={() => handleRemoveTag(tag)}
-                                    tabIndex={-1}
-                                    className="max-w-40 truncate"
+                                    className={`${tagStyles?.variants?.removable?.className || tagStyles?.removable?.className || 'px-2 py-1 text-xs bg-white/10 backdrop-blur-sm text-white rounded-md flex items-center gap-1 hover:bg-white/20 transition-colors'} max-w-40 truncate`}
                                     title={tag}
                                   >
                                     <span className="truncate">{tag}</span>
-                                  </Button>
+                                    <button
+                                      onClick={() => handleRemoveTag(tag)}
+                                      className="text-white/70 hover:text-white ml-1"
+                                      tabIndex={-1}
+                                    >
+                                      <XIcon className="h-4 w-4" />
+                                    </button>
+                                  </span>
                                 ))}
                               </div>
                             )}
@@ -878,25 +892,23 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                             {(tagSearch || showCreateTag) && (
                               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
                                 {filteredTags.map((tag) => (
-                                  <Button
+                                  <button
                                     key={tag.id}
-                                    size="sm"
-                                    className={`justify-start h-8 px-3 ${buttonStyle} max-w-full`}
+                                    className={`${tagStyles?.variants?.clickable?.className || tagStyles?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors'} max-w-full truncate text-left`}
                                     onClick={() => handleTagClick(tag.name)}
                                     title={tag.name}
                                   >
                                     <span className="truncate text-left">{tag.name}</span>
-                                  </Button>
+                                  </button>
                                 ))}
                                 {showCreateTag && (
-                                  <Button
-                                    size="sm"
-                                    className={`justify-start h-8 px-3 ${buttonStyle} max-w-full`}
+                                  <button
+                                    className={`${tagStyles?.variants?.clickable?.className || tagStyles?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors'} max-w-full truncate text-left`}
                                     onClick={handleCreateTag}
                                     title={`Create "${tagSearch}"`}
                                   >
                                     <span className="truncate text-left">Create "{tagSearch}"</span>
-                                  </Button>
+                                  </button>
                                 )}
                               </div>
                             )}
@@ -927,8 +939,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
           <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg px-4 sm:px-6 outline-none">
             <div className="backdrop-blur-xl border border-white/40 rounded-3xl p-6" style={{ 
-              backgroundColor: 'rgba(149, 153, 160, 0.90)',
-              boxShadow: '0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.3)'
+              backgroundColor: 'rgba(149, 153, 160, 0.90)'
             }}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-white">Delete {selectedType.slice(0, -1)}</h2>
@@ -946,7 +957,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                 <Button 
                   size="sm" 
                   onClick={() => setIsDeleteDialogOpen(false)}
-                  className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                  className={`${backgrounds.layer1} ${backgrounds.hover.layer2} ${text.primary} ${borders.secondary}`}
                 >
                   Cancel
                 </Button>
@@ -975,8 +986,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
             }}
           >
             <div className="backdrop-blur-xl border border-white/40 rounded-3xl p-6" style={{ 
-              backgroundColor: 'rgba(149, 153, 160, 0.90)',
-              boxShadow: '0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.3)'
+              backgroundColor: 'rgba(149, 153, 160, 0.90)'
             }}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white flex-1">
@@ -1010,17 +1020,17 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                   categories.map((category) => (
                     <button
                       key={category.id}
-                      className={`w-full text-left px-3 py-2 text-white text-sm hover:bg-white/20 rounded transition-colors flex items-center gap-2 ${
-                        assigningTag === category.id ? 'bg-white/20' : ''
+                      className={`w-full text-left px-3 py-2 ${text.primary} text-sm ${backgrounds.hover.layer2} ${radius.md} ${utilities.transition.colors} flex items-center gap-2 ${
+                        assigningTag === category.id ? backgrounds.selected.layer2 : ''
                       }`}
                       onClick={() => handleAssignTag(category.id)}
                       disabled={assigningTag === category.id}
                     >
                       <span className="text-blue-400">📂</span>
                       <span className="truncate">{category.name}</span>
-                      {category.is_private && <LockIcon className="h-4 w-4 text-white/60 flex-shrink-0" />}
+                      {category.is_private && <LockIcon className={`h-4 w-4 ${icons.muted} flex-shrink-0`} />}
                       {assigningTag === category.id && (
-                        <span className="text-white/60 text-xs ml-auto">Assigning...</span>
+                        <span className={`${text.muted} text-xs ml-auto`}>Assigning...</span>
                       )}
                     </button>
                   ))

@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon } from "lucide-react";
+import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon } from "lucide-react";
 import { Database } from '../../types/supabase';
 import { useAtomStore } from "../../store/atoms";
 import { IconButton } from "./icon-button";
 import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 import { Input } from "./input";
 import { Button } from "./button";
+import { SearchBar } from "./search-bar";
 import { CreatorInfo } from "./creator-info";
 import { supabase } from '../../lib/supabase';
 import { VideoPlayer } from "./video-player";
 import { uploadMedia } from '../../lib/storage';
 import { isVideoUrl } from '../../lib/utils';
+import { backgrounds, borders, text, icons, radius, tags, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -39,7 +41,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   onUpdate, 
   onDelete 
 }) => {
-  const { deleteAtom, updateAtom, fetchTags, fetchCreators, tags, creators, fetchAtoms, addCreator } = useAtomStore();
+  const { deleteAtom, updateAtom, fetchTags, fetchCreators, tags, creators, fetchAtoms, addCreator, addAtom } = useAtomStore();
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -237,6 +239,32 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     onClose();
   };
 
+  const handleDuplicate = async () => {
+    if (!atom) return;
+    try {
+      // Prepare new atom data, omitting id, created_at, updated_at
+      const {
+        id, created_at, updated_at, ...rest
+      } = atom;
+      
+      // Create duplicate atom
+      const newAtom = await addAtom({
+        ...rest,
+        title: rest.title || 'Untitled',
+        store_in_database: true,
+      });
+      
+      if (newAtom) {
+        // Refresh the feed to show the new atom
+        await fetchAtoms();
+        // Close the detail view - the duplicate will appear in the feed
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error duplicating atom:', error);
+    }
+  };
+
   const handleMediaDrop = async (files: File[]) => {
     if (files.length === 0) return;
     const file = files[0];
@@ -302,24 +330,24 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     !editCreators.includes(creatorSearch);
 
   const contentTypes = [
-    { icon: <ImageIcon className="h-4 w-4 text-white" />, label: "Image", type: "image" },
-    { icon: <LinkIcon className="h-4 w-4 text-white" />, label: "Link", type: "link" },
-    { icon: <VideoIcon className="h-4 w-4 text-white" />, label: "Video", type: "video" },
-    { icon: <PlayCircleIcon className="h-4 w-4 text-white" />, label: "YouTube", type: "youtube" },
-    { icon: <FileTextIcon className="h-4 w-4 text-white" />, label: "Note", type: "note" },
-    { icon: <BookIcon className="h-4 w-4 text-white" />, label: "Article", type: "article" },
-    { icon: <MusicIcon className="h-4 w-4 text-white" />, label: "Music", type: "music" },
-    { icon: <MapPinIcon className="h-4 w-4 text-white" />, label: "Location", type: "location" },
-    { icon: <UtensilsIcon className="h-4 w-4 text-white" />, label: "Recipe", type: "recipe" },
-    { icon: <ListIcon className="h-4 w-4 text-white" />, label: "Task", type: "task" },
+    { icon: <ImageIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Image", type: "image" },
+    { icon: <LinkIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Link", type: "link" },
+    { icon: <VideoIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Video", type: "video" },
+    { icon: <PlayCircleIcon className={`h-4 w-4 ${icons.primary}`} />, label: "YouTube", type: "youtube" },
+    { icon: <FileTextIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Note", type: "note" },
+    { icon: <BookIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Article", type: "article" },
+    { icon: <MusicIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Music", type: "music" },
+    { icon: <MapPinIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Location", type: "location" },
+    { icon: <UtensilsIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Recipe", type: "recipe" },
+    { icon: <ListIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Task", type: "task" },
   ];
 
   return (
-    <div className="bg-white/5 backdrop-blur-xl rounded-lg shadow-2xl border border-white/10 overflow-hidden">
+    <div className={`${backgrounds.layer2Strong} ${radius.md} shadow-2xl ${borders.tertiary} overflow-hidden`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-white/5 gap-3">
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-semibold text-white truncate">
+          <h2 className={`text-lg font-semibold ${text.primary} truncate`}>
             {atom.title || 'Untitled'}
           </h2>
         </div>
@@ -333,7 +361,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
               disabled={!hasPrevious}
               data-navigate="prev"
             >
-              <ChevronLeftIcon className="w-4 h-4 text-white" />
+              <ChevronLeftIcon className={`w-4 h-4 ${icons.primary}`} />
             </IconButton>
             <IconButton
               size="sm"
@@ -341,7 +369,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
               disabled={!hasNext}
               data-navigate="next"
             >
-              <ChevronRightIcon className="w-4 h-4 text-white" />
+              <ChevronRightIcon className={`w-4 h-4 ${icons.primary}`} />
             </IconButton>
           </div>
           
@@ -357,13 +385,20 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
             size="sm"
             onClick={() => setIsEditing(!isEditing)}
           >
-            <PencilIcon className="w-4 h-4 text-white" />
+            <PencilIcon className={`w-4 h-4 ${icons.primary}`} />
+          </IconButton>
+          <IconButton
+            size="sm"
+            onClick={handleDuplicate}
+            className="text-white hover:text-blue-200 hover:bg-blue-500/20"
+          >
+            <CopyIcon className="w-4 h-4" />
           </IconButton>
           <IconButton
             size="sm"
             onClick={onClose}
           >
-            <XIcon className="w-4 h-4 text-white" />
+            <XIcon className={`w-4 h-4 ${icons.primary}`} />
           </IconButton>
         </div>
       </div>
@@ -376,7 +411,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {isEditing && (
             <>
               {/* Edit Form */}
-              <div className="space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 mb-4">
+              <div className={`space-y-4 p-4 ${backgrounds.layer2} ${radius.md} ${borders.tertiary} mb-4`}>
                 {/* Save/Cancel buttons at top of form */}
                 <div className="flex gap-2 pb-2 border-b border-white/10">
                   <Button
@@ -395,7 +430,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">Content Type</label>
+                  <label className={`block text-sm font-medium ${text.primary} mb-2`}>Content Type</label>
                   <div className="flex flex-wrap gap-2">
                     {contentTypes.map((type) => (
                       <button
@@ -404,10 +439,10 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                           const updatedAtom = { ...atom, content_type: type.type };
                           onUpdate(updatedAtom);
                         }}
-                        className={`px-3 py-2 text-sm rounded-md transition-all duration-200 flex items-center gap-2 ${
+                        className={`px-3 py-2 text-sm ${radius.sm} ${utilities.transition.all} flex items-center gap-2 ${
                           atom.content_type === type.type
-                            ? 'bg-white/20 text-white border border-white/30'
-                            : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 hover:text-white'
+                            ? `${backgrounds.selected.layer2} ${text.primary} ${borders.secondary}`
+                            : `${backgrounds.layer2} ${text.secondary} ${borders.tertiary} ${backgrounds.hover.layer3} ${text.hover}`
                         }`}
                       >
                         {type.icon}
@@ -418,12 +453,12 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">Creators</label>
+                  <label className={`block text-sm font-medium ${text.primary} mb-2`}>Creators</label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {editCreators.map((creator, index) => (
                       <span
                         key={index}
-                        className="px-2 py-1 text-xs bg-white/10 text-white rounded-md flex items-center gap-1"
+                        className={tags.variants.removable.className}
                       >
                         {creator}
                         <button
@@ -436,11 +471,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     ))}
                   </div>
                   <div className="flex gap-2">
-                    <Input
+                    <SearchBar
                       value={creatorSearch}
                       onChange={(e) => setCreatorSearch(e.target.value)}
-                      color="glass"
                       placeholder="Search or add creators..."
+                      className="flex-1"
                     />
                     {showCreateCreator && (
                       <Button
@@ -477,12 +512,12 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">Tags</label>
+                  <label className={`block text-sm font-medium ${text.primary} mb-2`}>Tags</label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {editTags.map((tag, index) => (
                       <span
                         key={index}
-                        className="px-2 py-1 text-xs bg-white/10 text-white rounded-md flex items-center gap-1"
+                        className={tags.variants.removable.className}
                       >
                         {tag}
                         <button
@@ -495,11 +530,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     ))}
                   </div>
                   <div className="flex gap-2">
-                    <Input
+                    <SearchBar
                       value={tagSearch}
                       onChange={(e) => setTagSearch(e.target.value)}
-                      color="glass"
                       placeholder="Search or add tags..."
+                      className="flex-1"
                     />
                     {showCreateTag && (
                       <Button
@@ -532,7 +567,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">Title</label>
+                  <label className={`block text-sm font-medium ${text.primary} mb-2`}>Title</label>
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
@@ -542,18 +577,18 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">Description</label>
+                  <label className={`block text-sm font-medium ${text.primary} mb-2`}>Description</label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                    className="w-full p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[12px] text-white placeholder:text-white/60 placeholder:text-xs resize-none focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-colors duration-200"
+                    className={textareaTokens.base.className}
                     rows={4}
                     placeholder="Enter description..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">Source Link</label>
+                  <label className={`block text-sm font-medium ${text.primary} mb-2`}>Source Link</label>
                   <Input
                     value={editSourceUrl}
                     onChange={(e) => setEditSourceUrl(e.target.value)}
@@ -563,7 +598,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">External Link</label>
+                  <label className={`block text-sm font-medium ${text.primary} mb-2`}>External Link</label>
                   <Input
                     value={editExternalLink}
                     onChange={(e) => setEditExternalLink(e.target.value)}
@@ -575,11 +610,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 {/* Prompt field - only show for image and video types */}
                 {(atom.content_type === 'image' || atom.content_type === 'video') && (
                   <div>
-                    <label className="block text-sm font-medium text-white/90 mb-2">Prompt</label>
+                    <label className={`block text-sm font-medium ${text.primary} mb-2`}>Prompt</label>
                     <textarea
                       value={editPrompt}
                       onChange={(e) => setEditPrompt(e.target.value)}
-                      className="w-full p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[12px] text-white placeholder:text-white/60 placeholder:text-xs resize-none focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-colors duration-200"
+                      className={textareaTokens.base.className}
                       rows={3}
                       placeholder="Enter AI generation prompt..."
                     />
@@ -590,7 +625,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           )}
           
           {hasMedia && (
-            <div className="relative bg-white/10 backdrop-blur-sm flex items-center justify-center rounded-lg overflow-hidden mb-4 border border-white/5 min-h-[200px]">
+            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} min-h-[200px]`}>
               {isVideo ? (
                 <VideoPlayer
                   src={atom.media_source_link || ''}
@@ -631,16 +666,16 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {/* Description */}
           {atom.description && (
             <div className="mb-4">
-              <h3 className="text-sm font-medium text-white/90 mb-2">Description</h3>
-              <p className="text-sm text-white/80 leading-relaxed">{atom.description}</p>
+              <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Description</h3>
+              <p className={`text-sm ${text.secondary} leading-relaxed`}>{atom.description}</p>
             </div>
           )}
 
           {/* Prompt - only show for image and video types if populated (non-edit mode) */}
           {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video') && (
             <div className="mb-4">
-              <h3 className="text-sm font-medium text-white/90 mb-2">Prompt</h3>
-              <p className="text-sm text-white/80 leading-relaxed bg-white/5 p-3 rounded-lg border border-white/10">
+              <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Prompt</h3>
+              <p className={`text-sm ${text.secondary} leading-relaxed ${backgrounds.layer2} p-3 ${radius.md} ${borders.tertiary}`}>
                 {atom.prompt}
               </p>
             </div>
@@ -648,17 +683,17 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         </div>
 
         {/* Sidebar */}
-        <div className="w-full lg:w-80 p-4 lg:p-6 bg-white/2 backdrop-blur-sm border-t lg:border-t-0 lg:border-l border-white/5">
+        <div className={`w-full lg:w-80 p-4 lg:p-6 ${backgrounds.layer4} border-t lg:border-t-0 lg:border-l ${borders.quaternary}`}>
           {/* Creator Info */}
           {(atomCreators.length > 0 || atom.creator_name) && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-white/90 mb-2">Creator{atomCreators.length > 1 || (atom.creator_name && atom.creator_name.split(',').length > 1) ? 's' : ''}</h3>
+              <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Creator{atomCreators.length > 1 || (atom.creator_name && atom.creator_name.split(',').length > 1) ? 's' : ''}</h3>
               {atomCreators.length > 0 ? (
                 <div className="space-y-2">
                   {atomCreators.map((creator) => (
                     <div
                       key={creator.id}
-                      className="cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors"
+                      className={`cursor-pointer ${backgrounds.hover.layer5} ${radius.md} p-2 -m-2 ${utilities.transition.colors}`}
                       onClick={() => handleCreatorSelect(creator.name)}
                     >
                       <CreatorInfo name={creator.name} />
@@ -678,10 +713,10 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
           {/* Content Type */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-white/90 mb-2">Content Type</h3>
+            <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Content Type</h3>
             <div className="flex items-center gap-2">
-              {contentTypes.find(ct => ct.type === atom.content_type)?.icon || <FileIcon className="h-4 w-4 text-white" />}
-              <span className="text-sm text-white/80 capitalize">
+              {contentTypes.find(ct => ct.type === atom.content_type)?.icon || <FileIcon className={`h-4 w-4 ${icons.primary}`} />}
+              <span className={`text-sm ${text.secondary} capitalize`}>
                 {atom.content_type?.replace('-', ' ') || 'Unknown'}
               </span>
             </div>
@@ -690,8 +725,8 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {/* Created Date */}
           {atom.created_at && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-white/90 mb-2">Created</h3>
-              <p className="text-sm text-white/80">
+              <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Created</h3>
+              <p className={`text-sm ${text.secondary}`}>
                 {new Date(atom.created_at).toLocaleDateString()}
               </p>
             </div>
@@ -700,12 +735,12 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {/* Tags */}
           {atom.tags && atom.tags.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-white/90 mb-2">Tags</h3>
+              <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {atom.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors"
+                    className={tags?.variants?.clickable?.className || tags?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors'}
                     onClick={() => handleTagSelect(tag)}
                   >
                     {tag}
@@ -718,12 +753,12 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {/* External Link */}
           {atom.link && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-white/90 mb-2">External Link</h3>
+              <h3 className={`text-sm font-medium ${text.primary} mb-2`}>External Link</h3>
               <a
                 href={atom.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white hover:text-white/80 underline break-all"
+                className={`text-sm ${text.primary} ${text.hover} underline break-all`}
                 title={atom.link}
               >
                 {atom.link}

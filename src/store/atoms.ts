@@ -101,7 +101,7 @@ interface AtomStore {
   toggleFavoriteCreator: (creatorName: string) => Promise<void>;
   setSelectedCreators: (creators: string[]) => void;
   setShowOnlyFavorites: (show: boolean) => void;
-  addAtom: (atom: Omit<Database['public']['Tables']['atoms']['Insert'], 'id'>) => Promise<void>;
+  addAtom: (atom: Omit<Database['public']['Tables']['atoms']['Insert'], 'id'>) => Promise<Atom | undefined>;
   updateAtom: (id: number, updates: Partial<Database['public']['Tables']['atoms']['Update']>) => Promise<void>;
   addTag: (tag: Omit<Database['public']['Tables']['tags']['Insert'], 'id'>) => Promise<void>;
   addCategory: (category: Omit<Database['public']['Tables']['categories']['Insert'], 'id'>) => Promise<void>;
@@ -406,10 +406,37 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         throw error;
       }
 
-      const atoms = get().atoms;
-      set({ atoms: [...atoms, data[0]] });
+      if (data && data[0]) {
+        const newAtom = data[0];
+        
+        // Handle atom_creators join table if creator_name is provided
+        if (atom.creator_name) {
+          const creatorNames = atom.creator_name.split(',').map(s => s.trim()).filter(Boolean);
+          const { data: allCreators } = await supabase.from('creators').select('*');
+          const creatorIds = [];
+          for (const name of creatorNames) {
+            let creator = allCreators?.find((c: any) => c.name === name);
+            if (!creator) {
+              const { data: newCreator } = await supabase.from('creators').insert([{ name, count: 1 }]).select().single();
+              creator = newCreator;
+            }
+            if (creator) creatorIds.push(creator.id);
+          }
+          // Add creator links
+          for (const creator_id of creatorIds) {
+            await supabase.from('atom_creators').insert([{ atom_id: newAtom.id, creator_id }]);
+          }
+        }
+        
+        const atoms = get().atoms;
+        // Prepend new atom to appear at top of feed (newest first)
+        set({ atoms: [newAtom, ...atoms] });
+        return newAtom;
+      }
+      return undefined;
     } catch (error) {
       console.error('Failed to add atom:', error);
+      return undefined;
     }
   },
 

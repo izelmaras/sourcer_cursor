@@ -4,6 +4,7 @@ import { Button } from './button';
 import { ModalWrapper } from './modal-wrapper';
 import { ModalHeader } from './modal/modal-header';
 import { ModalBody } from './modal/modal-body';
+import { backgrounds, borders, text, radius, utilities } from '../../lib/design-tokens';
 
 interface DeleteConfirmationModalProps {
   open: boolean;
@@ -21,19 +22,19 @@ export const DeleteConfirmationModal = ({
   description = 'Are you sure you want to delete this item? This action cannot be undone.'
 }: DeleteConfirmationModalProps) => {
   return (
-    <Modal open={open} onClose={onClose} className="bg-white/10 backdrop-blur-sm rounded-[32px] shadow-xl border border-white/20 max-w-md mx-4">
+    <Modal open={open} onClose={onClose} className={`${backgrounds.layer1} ${radius.modal} ${utilities.shadow.xl} ${borders.secondary} max-w-md mx-4`}>
       <ModalWrapper>
-        <ModalHeader className="border-b border-white/20 p-6 pb-4">
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        <ModalHeader className={`border-b ${borders.secondary} p-6 pb-4`}>
+          <h3 className={`text-lg font-semibold ${text.primary}`}>{title}</h3>
         </ModalHeader>
         <ModalBody className="p-6 pt-4">
-          <p className="text-white/80 mb-6">
+          <p className={`${text.secondary} mb-6`}>
             {description}
           </p>
           <div className="flex justify-end gap-3">
             <Button
               onClick={onClose}
-              className="bg-white/5 backdrop-blur-sm text-white border border-white/10 hover:bg-white/8"
+              className={`${backgrounds.layer2} ${text.primary} ${borders.tertiary} ${backgrounds.hover.layer4}`}
             >
               Cancel
             </Button>

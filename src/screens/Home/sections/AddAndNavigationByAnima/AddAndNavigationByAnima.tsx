@@ -1,7 +1,7 @@
 import { ChevronDownIcon, ChevronRightIcon, Flag, ImageOff, FolderIcon, PlusIcon, FilterIcon, NewspaperIcon, BookAudioIcon as AudioIcon, BookIcon, HeartIcon, LightbulbIcon, ImageIcon, FileTextIcon, LinkIcon, FilmIcon, PlayCircleIcon, UtensilsIcon, MusicIcon, ListIcon, VideoIcon, X, UsersIcon, SearchIcon } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/button";
-import { colors } from "../../../../lib/design-tokens";
+import { colors, backgrounds, borders, text, icons, radius, dropdowns, utilities, tags } from "../../../../lib/design-tokens";
 import { SearchBar } from "../../../../components/ui/search-bar";
 import { CreatorDropdown } from "../../../../components/ui/creator-dropdown";
 import { useAtomStore } from "../../../../store/atoms";
@@ -310,22 +310,25 @@ export const AddAndNavigationByAnima = ({
                   atom.tags && atom.tags.includes(tag.name)
                 ).length;
                 
+                const isSelected = selectedTags.includes(tag.name);
+                const withCountBase = tags?.variants?.withCount?.base?.className || 'px-3 py-1.5 text-sm rounded-2xl transition-all duration-200 flex items-center gap-2';
+                const withCountSelected = tags?.variants?.withCount?.selected?.className || 'bg-white/20 text-white border border-white/30';
+                const withCountUnselected = tags?.variants?.withCount?.unselected?.className || 'bg-white/5 text-white border border-white/10 hover:bg-white/8 hover:text-white';
+                const badgeSelected = tags?.variants?.withCount?.badge?.selected?.className || 'px-1.5 py-0.5 text-xs rounded-full bg-white/20 text-white';
+                const badgeUnselected = tags?.variants?.withCount?.badge?.unselected?.className || 'px-1.5 py-0.5 text-xs rounded-full bg-white/8 text-white/80';
+                
                 return (
                   <button
                     key={tag.id}
                     onClick={() => toggleTag(tag.name)}
-                    className={`px-3 py-1.5 text-sm rounded-2xl transition-all duration-200 ${
-                      selectedTags.includes(tag.name)
-                        ? 'bg-white/20 text-white border border-white/30'
-                        : 'bg-white/5 text-white border border-white/10 hover:bg-white/8 hover:text-white'
+                    className={`${withCountBase} ${
+                      isSelected
+                        ? withCountSelected
+                        : withCountUnselected
                     }`}
                   >
                     <span className="text-white">{tag.name}</span>
-                    <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${
-                      selectedTags.includes(tag.name)
-                        ? 'bg-white/20 text-white'
-                        : 'bg-white/8 text-white/80'
-                    }`}>
+                    <span className={`ml-2 ${isSelected ? badgeSelected : badgeUnselected}`}>
                       {tagCount}
                     </span>
                   </button>

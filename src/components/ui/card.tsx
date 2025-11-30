@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { cn } from "../../lib/utils";
+import { cards, backgrounds, borders, text, radius, utilities } from "../../lib/design-tokens";
 
 const GalleryTile = React.forwardRef<
   HTMLDivElement,
@@ -9,9 +10,8 @@ const GalleryTile = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // Glassmorphism liquid effect with increased transparency
-      "rounded-xl border bg-white/5 backdrop-blur-sm overflow-hidden relative transition-all duration-500 hover:scale-[1.02] hover:bg-white/10",
-      "border border-white/10 shadow-2xl",
+      cards.base.className,
+      cards.hover,
       "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:via-transparent before:to-white/3 before:rounded-xl",
       "after:absolute after:inset-0 after:bg-gradient-to-tr after:from-transparent after:via-white/3 after:to-transparent after:rounded-xl",
       "group cursor-pointer",
@@ -28,7 +28,7 @@ const GalleryTileHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6 bg-white/3 backdrop-blur-sm", className)}
+    className={cn(`flex flex-col space-y-1.5 p-6 ${backgrounds.layer3}`, className)}
     {...props}
   />
 ));
@@ -40,7 +40,7 @@ const GalleryTileTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("font-semibold leading-none tracking-tight text-white", className)}
+    className={cn(`font-semibold leading-none tracking-tight ${text.primary}`, className)}
     {...props}
   />
 ));
@@ -52,7 +52,7 @@ const GalleryTileDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-sm text-white/80", className)}
+    className={cn(`text-sm ${text.secondary}`, className)}
     {...props}
   />
 ));
@@ -62,7 +62,7 @@ const GalleryTileContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0 bg-white/3 backdrop-blur-sm", className)} {...props} />
+  <div ref={ref} className={cn(`p-6 pt-0 ${backgrounds.layer3}`, className)} {...props} />
 ));
 GalleryTileContent.displayName = "GalleryTileContent";
 

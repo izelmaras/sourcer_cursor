@@ -16,6 +16,7 @@ import { VideoPlayer } from "../../components/ui/video-player";
 import { uploadMedia } from '../../lib/storage';
 import { isVideoUrl } from '../../lib/utils';
 import { performanceMonitor } from '../../lib/performance-monitor';
+import { icons, radius, backgrounds, borders, text } from '../../lib/design-tokens';
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -545,39 +546,28 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
   // Duplicate function
   const handleDuplicate = async () => {
     if (!stableAtom) return;
-    // Prepare new atom data, omitting id, created_at, updated_at
-    const {
-      id, created_at, updated_at, ...rest
-    } = stableAtom;
-    // Insert as new atom
-    await addAtom({
-      ...rest,
-      title: rest.title ? rest.title + ' (Copy)' : 'Untitled (Copy)',
-      store_in_database: true,
-    });
-    // Refetch atoms to get the new ID
-    await fetchAtoms();
-    // Find the most recent atom with the same title (should be the duplicate)
-    const newAtom = getMostRecentDuplicate(rest.title ? rest.title + ' (Copy)' : 'Untitled (Copy)');
-    if (newAtom) {
-      onClose(); // Close the current detail modal
-      setTimeout(() => {
-        navigate(`/detail/${newAtom.id}`);
-      }, 0);
-    }
-  };
-
-  // Helper to find the most recent duplicate by title
-  const getMostRecentDuplicate = (title: string) => {
-    const matches = allAtoms.filter(a => a.title === title);
-    if (matches.length === 0) return null;
-    // Return the one with the latest created_at
-    return matches.reduce((latest, atom) => {
-      if (!latest.created_at || (atom.created_at && atom.created_at > latest.created_at)) {
-        return atom;
+    try {
+      // Prepare new atom data, omitting id, created_at, updated_at
+      const {
+        id, created_at, updated_at, ...rest
+      } = stableAtom;
+      
+      // Create duplicate atom
+      const newAtom = await addAtom({
+        ...rest,
+        title: rest.title || 'Untitled',
+        store_in_database: true,
+      });
+      
+      if (newAtom) {
+        // Refresh the feed to show the new atom
+        await fetchAtoms();
+        // Close the detail view - the duplicate will appear in the feed
+        onClose();
       }
-      return latest;
-    }, matches[0]);
+    } catch (error) {
+      console.error('Error duplicating atom:', error);
+    }
   };
 
   // Use stableAtom which falls back to ref if stableAtom is temporarily undefined
@@ -619,27 +609,27 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
 
   // Content types for type switcher
   const contentTypes = [
-    { icon: <NewspaperIcon className="h-4 w-4 text-white" />, label: "Article/blog", type: "article" },
-    { icon: <AudioIcon className="h-4 w-4 text-white" />, label: "Audio", type: "audio" },
-    { icon: <BookIcon className="h-4 w-4 text-white" />, label: "Book", type: "book" },
-    { icon: <HeartIcon className="h-4 w-4 text-white" />, label: "Feeling", type: "feeling" },
-    { icon: <LightbulbIcon className="h-4 w-4 text-white" />, label: "Idea", type: "idea" },
-    { icon: <ImageIcon className="h-4 w-4 text-white" />, label: "Image", type: "image" },
-    { icon: <FileTextIcon className="h-4 w-4 text-white" />, label: "Life event", type: "life-event" },
-    { icon: <LinkIcon className="h-4 w-4 text-white" />, label: "Link", type: "link" },
-    { icon: <FileTextIcon className="h-4 w-4 text-white" />, label: "Memory", type: "memory" },
-    { icon: <FilmIcon className="h-4 w-4 text-white" />, label: "Movie", type: "movie" },
-    { icon: <FileTextIcon className="h-4 w-4 text-white" />, label: "Note", type: "note" },
-    { icon: <FileTextIcon className="h-4 w-4 text-white" />, label: "PDF", type: "pdf" },
-    { icon: <PlayCircleIcon className="h-4 w-4 text-white" />, label: "Podcast", type: "podcast" },
-    { icon: <FolderIcon className="h-4 w-4 text-white" />, label: "Project", type: "project" },
-    { icon: <UtensilsIcon className="h-4 w-4 text-white" />, label: "Recipe", type: "recipe" },
-    { icon: <MusicIcon className="h-4 w-4 text-white" />, label: "Spotify", type: "spotify" },
-    { icon: <MusicIcon className="h-4 w-4 text-white" />, label: "Playlist", type: "playlist" },
-    { icon: <ListIcon className="h-4 w-4 text-white" />, label: "Task", type: "task" },
-    { icon: <VideoIcon className="h-4 w-4 text-white" />, label: "Video", type: "video" },
-    { icon: <LinkIcon className="h-4 w-4 text-white" />, label: "Website", type: "website" },
-    { icon: <PlayCircleIcon className="h-4 w-4 text-white" />, label: "YouTube", type: "youtube" },
+    { icon: <NewspaperIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Article/blog", type: "article" },
+    { icon: <AudioIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Audio", type: "audio" },
+    { icon: <BookIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Book", type: "book" },
+    { icon: <HeartIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Feeling", type: "feeling" },
+    { icon: <LightbulbIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Idea", type: "idea" },
+    { icon: <ImageIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Image", type: "image" },
+    { icon: <FileTextIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Life event", type: "life-event" },
+    { icon: <LinkIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Link", type: "link" },
+    { icon: <FileTextIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Memory", type: "memory" },
+    { icon: <FilmIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Movie", type: "movie" },
+    { icon: <FileTextIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Note", type: "note" },
+    { icon: <FileTextIcon className={`h-4 w-4 ${icons.primary}`} />, label: "PDF", type: "pdf" },
+    { icon: <PlayCircleIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Podcast", type: "podcast" },
+    { icon: <FolderIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Project", type: "project" },
+    { icon: <UtensilsIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Recipe", type: "recipe" },
+    { icon: <MusicIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Spotify", type: "spotify" },
+    { icon: <MusicIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Playlist", type: "playlist" },
+    { icon: <ListIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Task", type: "task" },
+    { icon: <VideoIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Video", type: "video" },
+    { icon: <LinkIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Website", type: "website" },
+    { icon: <PlayCircleIcon className={`h-4 w-4 ${icons.primary}`} />, label: "YouTube", type: "youtube" },
   ];
   const [editType, setEditType] = useState(stableAtom?.content_type || "image");
 
@@ -651,7 +641,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
             className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl mx-auto px-4 sm:px-6"
             onClick={e => e.stopPropagation()}
           >
-            <div className="bg-white w-full rounded-xl shadow-xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className={`${backgrounds.light.base} w-full ${radius.card} shadow-xl max-h-[90vh] flex flex-col overflow-hidden`}>
               {/* Header with action buttons */}
               <div className="flex items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-4">
@@ -816,7 +806,7 @@ export const DetailView = ({ atom, open, onClose, filteredAtoms, searchTerm, sel
                 </div>
 
                 {/* Right column - Content */}
-                <div className="w-96 border-l bg-white overflow-y-auto">
+                <div className={`w-96 border-l ${backgrounds.light.base} overflow-y-auto`}>
                   <div className="p-6 space-y-6">
                     {/* Type selector */}
                     <div className="flex items-center justify-between">

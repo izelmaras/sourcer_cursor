@@ -246,25 +246,37 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-white/80">Source link</label>
-                    <ContentFields
-                      type={selectedType}
-                      locationAddress={locationAddress}
-                      setLocationAddress={setLocationAddress}
-                      locationLatitude={locationLatitude}
-                      setLocationLatitude={setLocationLatitude}
-                      locationLongitude={locationLongitude}
-                      setLocationLongitude={setLocationLongitude}
-                      sourceLink={sourceLink}
-                      setSourceLink={setSourceLink}
-                      steps={steps}
-                      setSteps={setSteps}
-                      materials={materials}
-                      setMaterials={setMaterials}
-                      className={colors.button.secondary}
-                    />
-                  </div>
+                  {(() => {
+                    // List of types that support a source link
+                    const typesWithSourceLink = [
+                      "video", "audio", "image", "recipe", "location", "link", "website", "youtube", "pdf", "movie", "podcast"
+                    ];
+                    const hasSourceLink = typesWithSourceLink.includes(selectedType);
+                    
+                    if (!hasSourceLink) return null;
+                    
+                    return (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-white/80">Source link</label>
+                        <ContentFields
+                          type={selectedType}
+                          locationAddress={locationAddress}
+                          setLocationAddress={setLocationAddress}
+                          locationLatitude={locationLatitude}
+                          setLocationLatitude={setLocationLatitude}
+                          locationLongitude={locationLongitude}
+                          setLocationLongitude={setLocationLongitude}
+                          sourceLink={sourceLink}
+                          setSourceLink={setSourceLink}
+                          steps={steps}
+                          setSteps={setSteps}
+                          materials={materials}
+                          setMaterials={setMaterials}
+                          className={colors.button.secondary}
+                        />
+                      </div>
+                    );
+                  })()}
 
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-white/80 mt-2">External link</label>
