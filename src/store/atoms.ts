@@ -125,6 +125,12 @@ interface AtomStore {
   toggleTag: (tagName: string) => void;
   clearSelectedTags: () => void;
   setTagDrawerCollapsed: (collapsed: boolean) => void;
+  // Atom relationships
+  fetchChildAtoms: (parentAtomId: number) => Promise<Atom[]>;
+  fetchParentAtoms: (childAtomId: number) => Promise<Atom[]>;
+  addChildAtom: (parentAtomId: number, childAtomId: number) => Promise<void>;
+  removeChildAtom: (parentAtomId: number, childAtomId: number) => Promise<void>;
+  getChildAtomCount: (parentAtomId: number) => number;
 }
 
 export const useAtomStore = create<AtomStore>((set, get) => ({
@@ -997,5 +1003,159 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
       console.error('Failed to add creator:', error);
       throw error; // Re-throw to handle in the UI
     }
+  },
+
+  // Atom relationships
+  fetchChildAtoms: async (parentAtomId: number) => {
+    try {
+      // Use simple approach: fetch relationships first, then fetch atoms
+      const { data: relData, error: relError } = await supabase
+        .from('atom_relationships')
+        .select('child_atom_id')
+        .eq('parent_atom_id', parentAtomId);
+      
+      if (relError) {
+        console.error('Error fetching child atom relationships:', relError.message, relError);
+        // If table doesn't exist (404), return empty array
+        if (relError.code === 'PGRST116' || relError.message.includes('404')) {
+          console.warn('atom_relationships table may not exist. Please run the migration.');
+          return [];
+        }
+        throw relError;
+      }
+      
+      if (relData && relData.length > 0) {
+        const childIds = relData.map((rel: any) => rel.child_atom_id);
+        const { data: atomsData, error: atomsError } = await supabase
+          .from('atoms')
+          .select('*')
+          .in('id', childIds);
+        
+        if (atomsError) {
+          console.error('Error fetching child atoms:', atomsError.message, atomsError);
+          throw atomsError;
+        }
+        
+        return atomsData || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch child atoms:', error);
+      return [];
+    }
+  },
+
+  fetchParentAtoms: async (childAtomId: number) => {
+    try {
+      console.log('fetchParentAtoms called for childAtomId:', childAtomId);
+      
+      // Fetch parent atom IDs
+      const { data: relData, error: relError } = await supabase
+        .from('atom_relationships')
+        .select('parent_atom_id')
+        .eq('child_atom_id', childAtomId);
+      
+      if (relError) {
+        console.error('Error fetching parent atom IDs:', relError.message, relError);
+        // If table doesn't exist (404), return empty array
+        if (relError.code === 'PGRST116' || relError.message.includes('404')) {
+          console.warn('atom_relationships table may not exist. Please run the migration.');
+          return [];
+        }
+        throw relError;
+      }
+      
+      console.log('Parent relationships found:', relData);
+      
+      if (relData && relData.length > 0) {
+        const parentIds = relData.map((rel: any) => rel.parent_atom_id);
+        console.log('Fetching parent atoms with IDs:', parentIds);
+        
+        const { data: atomsData, error: atomsError } = await supabase
+          .from('atoms')
+          .select('*')
+          .in('id', parentIds);
+        
+        if (atomsError) {
+          console.error('Error fetching parent atoms:', atomsError.message, atomsError);
+          throw atomsError;
+        }
+        
+        console.log('Parent atoms fetched:', atomsData);
+        return atomsData || [];
+      }
+      console.log('No parent relationships found');
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch parent atoms:', error);
+      return [];
+    }
+  },
+
+  addChildAtom: async (parentAtomId: number, childAtomId: number) => {
+    try {
+      // Prevent self-reference
+      if (parentAtomId === childAtomId) {
+        throw new Error('Cannot add atom as its own child');
+      }
+
+      console.log('addChildAtom called:', { parentAtomId, childAtomId });
+
+      const { data, error } = await supabase
+        .from('atom_relationships')
+        .insert([{
+          parent_atom_id: parentAtomId,
+          child_atom_id: childAtomId
+        }])
+        .select();
+      
+      if (error) {
+        console.error('❌ Error adding child atom:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          fullError: error
+        });
+        // If table doesn't exist (404), provide helpful error
+        if (error.code === 'PGRST116' || error.message.includes('404')) {
+          throw new Error('atom_relationships table does not exist. Please run the migration: supabase/migrations/20250121000000_add_atom_relationships.sql');
+        }
+        throw error;
+      }
+      
+      console.log('✅ Child atom relationship created successfully:', data);
+      if (!data || data.length === 0) {
+        console.warn('⚠️ Insert returned no data - relationship may not have been created');
+      }
+    } catch (error) {
+      console.error('Failed to add child atom:', error);
+      throw error;
+    }
+  },
+
+  removeChildAtom: async (parentAtomId: number, childAtomId: number) => {
+    try {
+      const { error } = await supabase
+        .from('atom_relationships')
+        .delete()
+        .eq('parent_atom_id', parentAtomId)
+        .eq('child_atom_id', childAtomId);
+      
+      if (error) {
+        console.error('Error removing child atom:', error.message, error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Failed to remove child atom:', error);
+      throw error;
+    }
+  },
+
+  getChildAtomCount: (parentAtomId: number) => {
+    // This is a synchronous helper that could be optimized with caching
+    // For now, we'll need to fetch this separately or cache it
+    // Returning 0 as placeholder - actual count should be fetched
+    return 0;
   }
 }));

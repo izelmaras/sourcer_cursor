@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon } from "lucide-react";
+import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon, FilterIcon, LightbulbIcon, MinusIcon, PlusIcon, LayersIcon } from "lucide-react";
 import { Database } from '../../types/supabase';
 import { useAtomStore } from "../../store/atoms";
 import { IconButton } from "./icon-button";
@@ -13,6 +13,7 @@ import { VideoPlayer } from "./video-player";
 import { uploadMedia } from '../../lib/storage';
 import { isVideoUrl } from '../../lib/utils';
 import { backgrounds, borders, text, icons, radius, tags as tagStyles, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
+import { useNavigate } from "react-router-dom";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -24,6 +25,7 @@ interface InlineDetailProps {
   hasNext: boolean;
   onUpdate: (updatedAtom: Atom) => void;
   onDelete: (atomId: number) => void;
+  onOpenAtom?: (atom: Atom) => void;
 }
 
 const ZOOM_SETTINGS = {
@@ -39,9 +41,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   hasPrevious, 
   hasNext, 
   onUpdate, 
-  onDelete 
+  onDelete,
+  onOpenAtom
 }) => {
-  const { deleteAtom, updateAtom, fetchTags, fetchCreators, tags, creators, fetchAtoms, addCreator, addAtom } = useAtomStore();
+  const { deleteAtom, updateAtom, fetchTags, fetchCreators, tags, creators, fetchAtoms, addCreator, addAtom, fetchChildAtoms, addChildAtom, removeChildAtom, fetchParentAtoms, atoms: allAtoms } = useAtomStore();
+  const navigate = useNavigate();
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -67,6 +71,13 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [isUploadingMainImage, setIsUploadingMainImage] = useState(false);
+  const [parentIdeas, setParentIdeas] = useState<Atom[]>([]);
+  const [isLoadingParentIdeas, setIsLoadingParentIdeas] = useState(false);
+  const [isEditingParentIdeas, setIsEditingParentIdeas] = useState(false);
+  const [parentIdeaSearch, setParentIdeaSearch] = useState('');
+  const [selectedParentIdeas, setSelectedParentIdeas] = useState<number[]>([]);
+  const [childAtomCount, setChildAtomCount] = useState<number>(0);
+  const [isLoadingChildCount, setIsLoadingChildCount] = useState(false);
 
   useEffect(() => {
     fetchTags();
@@ -116,6 +127,54 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     }
     fetchAtomCreators();
   }, [atom?.id]);
+
+  // Fetch parent ideas (ideas that contain this atom)
+  useEffect(() => {
+    const fetchParents = async () => {
+      if (atom?.id && atom.content_type !== 'idea') {
+        setIsLoadingParentIdeas(true);
+        try {
+          const parents = await fetchParentAtoms(atom.id);
+          setParentIdeas(parents);
+          setSelectedParentIdeas(parents.map(p => p.id));
+        } catch (error) {
+          console.error('Error fetching parent ideas:', error);
+          setParentIdeas([]);
+        } finally {
+          setIsLoadingParentIdeas(false);
+        }
+      } else {
+        setParentIdeas([]);
+        setSelectedParentIdeas([]);
+      }
+    };
+    if (atom?.id) {
+      fetchParents();
+    }
+  }, [atom?.id, atom?.content_type, fetchParentAtoms]);
+
+  // Fetch child atom count for ideas
+  useEffect(() => {
+    const fetchChildCount = async () => {
+      if (atom?.id && atom.content_type === 'idea') {
+        setIsLoadingChildCount(true);
+        try {
+          const children = await fetchChildAtoms(atom.id);
+          setChildAtomCount(children.length);
+        } catch (error) {
+          console.error('Error fetching child atoms:', error);
+          setChildAtomCount(0);
+        } finally {
+          setIsLoadingChildCount(false);
+        }
+      } else {
+        setChildAtomCount(0);
+      }
+    };
+    if (atom?.id) {
+      fetchChildCount();
+    }
+  }, [atom?.id, atom?.content_type, fetchChildAtoms]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft' && hasPrevious) {
@@ -265,6 +324,44 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     }
   };
 
+  const handleAddParentIdea = async (ideaId: number) => {
+    if (!atom?.id) return;
+    try {
+      await addChildAtom(ideaId, atom.id);
+      const parents = await fetchParentAtoms(atom.id);
+      setParentIdeas(parents);
+      setSelectedParentIdeas(parents.map(p => p.id));
+      setParentIdeaSearch('');
+    } catch (error) {
+      console.error('Error adding parent idea:', error);
+    }
+  };
+
+  const handleRemoveParentIdea = async (ideaId: number) => {
+    if (!atom?.id) return;
+    try {
+      await removeChildAtom(ideaId, atom.id);
+      const parents = await fetchParentAtoms(atom.id);
+      setParentIdeas(parents);
+      setSelectedParentIdeas(parents.map(p => p.id));
+    } catch (error) {
+      console.error('Error removing parent idea:', error);
+    }
+  };
+
+  const availableIdeasForParents = React.useMemo(() => {
+    if (!atom || atom.content_type === 'idea') return [];
+    const parentIds = new Set(parentIdeas.map(p => p.id));
+    return allAtoms.filter(idea => 
+      idea.content_type === 'idea' &&
+      idea.id !== atom.id &&
+      !parentIds.has(idea.id) &&
+      (!parentIdeaSearch || 
+        idea.title?.toLowerCase().includes(parentIdeaSearch.toLowerCase()) ||
+        idea.description?.toLowerCase().includes(parentIdeaSearch.toLowerCase()))
+    );
+  }, [allAtoms, atom, parentIdeas, parentIdeaSearch]);
+
   const handleMediaDrop = async (files: File[]) => {
     if (files.length === 0) return;
     const file = files[0];
@@ -342,8 +439,10 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     { icon: <ListIcon className={`h-4 w-4 ${icons.primary}`} />, label: "Task", type: "task" },
   ];
 
+  const isIdea = atom.content_type === 'idea';
+  
   return (
-    <div className={`${backgrounds.layer2Strong} ${radius.md} shadow-2xl ${borders.tertiary} overflow-hidden`}>
+    <div className={`${isIdea ? 'bg-gradient-to-br from-teal-500/10 via-teal-400/5 to-transparent border-teal-400/20' : `${backgrounds.layer2Strong} ${borders.tertiary}`} ${radius.md} shadow-2xl overflow-hidden`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-white/5 gap-3">
         <div className="flex-1 min-w-0">
@@ -353,6 +452,26 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         </div>
         
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* Filter icon for ideas */}
+          {atom?.content_type === 'idea' && (
+            <IconButton 
+              onClick={() => {
+                navigate(`/?filterIdea=${atom.id}`);
+                onClose();
+              }} 
+              size="sm"
+              title="Filter gallery by this idea"
+              className="px-3 w-auto min-w-[2rem]"
+            >
+              <div className="flex items-center gap-1.5">
+                <FilterIcon className={`w-4 h-4 ${icons.primary}`} />
+                {!isLoadingChildCount && childAtomCount > 0 && (
+                  <span className={`text-xs ${text.primary}`}>{childAtomCount}</span>
+                )}
+              </div>
+            </IconButton>
+          )}
+          
           {/* Navigation */}
           <div className="flex items-center gap-1">
             <IconButton
@@ -390,7 +509,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           <IconButton
             size="sm"
             onClick={handleDuplicate}
-            className="text-white hover:text-blue-200 hover:bg-blue-500/20"
+            className="text-white hover:text-white hover:bg-white/10"
           >
             <CopyIcon className="w-4 h-4" />
           </IconButton>
@@ -406,7 +525,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
       {/* Content */}
       <div className="flex flex-col lg:flex-row">
         {/* Media Section */}
-        <div className="flex-1 p-4 lg:p-6">
+        <div className="flex-1 p-4">
           {/* Edit Mode - appears above image when editing */}
           {isEditing && (
             <>
@@ -671,7 +790,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {/* Description */}
           {atom.description && (
             <div className="mb-4">
-              <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Description</h3>
               <p className={`text-sm ${text.secondary} leading-relaxed`}>{atom.description}</p>
             </div>
           )}
@@ -688,7 +806,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         </div>
 
         {/* Sidebar */}
-        <div className={`w-full lg:w-80 p-4 lg:p-6 ${backgrounds.layer4} border-t lg:border-t-0 lg:border-l ${borders.quaternary}`}>
+        <div className={`w-full lg:w-80 p-4 ${backgrounds.layer4} border-t lg:border-t-0 lg:border-l ${borders.quaternary}`}>
           {/* Creator Info */}
           {(atomCreators.length > 0 || atom.creator_name) && (
             <div className="mb-6">
@@ -713,6 +831,156 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                   <CreatorInfo name={atom.creator_name} />
                 </div>
               ) : null}
+            </div>
+          )}
+
+
+          {/* Parent Ideas - Only for non-idea atoms */}
+          {atom?.content_type !== 'idea' && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className={`text-sm font-medium ${text.primary}`}>
+                  Ideas
+                  {isLoadingParentIdeas && <span className="text-xs text-white/50">(loading...)</span>}
+                </h3>
+                <IconButton
+                  onClick={() => {
+                    setIsEditingParentIdeas(!isEditingParentIdeas);
+                    if (!isEditingParentIdeas) {
+                      setParentIdeaSearch('');
+                    }
+                  }}
+                  size="sm"
+                  title={isEditingParentIdeas ? "Close edit mode" : "Edit ideas"}
+                >
+                  {isEditingParentIdeas ? (
+                    <XIcon className={`w-3 h-3 ${icons.primary}`} />
+                  ) : (
+                    <PencilIcon className={`w-3 h-3 ${icons.primary}`} />
+                  )}
+                </IconButton>
+              </div>
+
+              {isEditingParentIdeas ? (
+                <div className="space-y-3">
+                  {/* Add parent idea search */}
+                  <div className="space-y-2 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <label className={`text-xs font-medium ${text.secondary} block`}>
+                      Add to Idea
+                    </label>
+                    <Input
+                      value={parentIdeaSearch}
+                      onChange={(e) => setParentIdeaSearch(e.target.value)}
+                      placeholder="Type to search for ideas..."
+                      color="glass"
+                      inputSize="sm"
+                      autoFocus
+                      className="rounded-2xl"
+                    />
+                    {availableIdeasForParents.length > 0 ? (
+                      <div className="max-h-32 overflow-y-auto space-y-1 mt-2">
+                        <div className={`text-xs ${text.tertiary} mb-1`}>
+                          Click an idea to add this atom to it:
+                        </div>
+                        {availableIdeasForParents.slice(0, 10).map((idea) => (
+                          <div
+                            key={idea.id}
+                            className="flex items-center justify-between p-2 hover:bg-white/10 rounded cursor-pointer border border-transparent hover:border-white/20 transition-all"
+                            onClick={() => handleAddParentIdea(idea.id)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className={`text-xs font-medium ${text.primary} truncate`}>
+                                {idea.title}
+                              </div>
+                            </div>
+                            <PlusIcon className={`w-3 h-3 ${icons.secondary} ml-2 flex-shrink-0`} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={`text-xs ${text.tertiary} text-center py-2`}>
+                        {parentIdeaSearch ? (
+                          <div>No ideas found matching "{parentIdeaSearch}"</div>
+                        ) : (
+                          <div>Start typing to search for ideas...</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Display current parent ideas with remove option */}
+                  {parentIdeas.length > 0 && (
+                    <div className="space-y-2">
+                      <div className={`text-xs ${text.tertiary} mb-1`}>
+                        This atom is part of {parentIdeas.length} idea{parentIdeas.length !== 1 ? 's' : ''}:
+                      </div>
+                      {parentIdeas.map((idea) => (
+                        <div
+                          key={idea.id}
+                          className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10 hover:bg-white/10 transition-colors"
+                        >
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => {
+                              if (onOpenAtom) {
+                                onOpenAtom(idea);
+                              } else {
+                                onClose();
+                                navigate(`/detail/${idea.id}`);
+                              }
+                            }}
+                          >
+                            <div className={`text-xs font-medium ${text.primary} truncate`}>
+                              {idea.title}
+                            </div>
+                          </div>
+                          <IconButton
+                            onClick={() => handleRemoveParentIdea(idea.id)}
+                            size="sm"
+                            className="ml-2"
+                            title="Remove from this idea"
+                          >
+                            <MinusIcon className={`w-3 h-3 ${icons.secondary}`} />
+                          </IconButton>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {isLoadingParentIdeas ? (
+                    <div className={`text-xs ${text.tertiary} text-center py-2`}>Loading...</div>
+                  ) : parentIdeas.length > 0 ? (
+                    <div className="space-y-2">
+                      {parentIdeas.map((idea) => (
+                        <div
+                          key={idea.id}
+                          className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                          onClick={() => {
+                            if (onOpenAtom) {
+                              onOpenAtom(idea);
+                            } else {
+                              onClose();
+                              navigate(`/detail/${idea.id}`);
+                            }
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-xs font-medium ${text.primary} truncate`}>
+                              {idea.title}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`text-xs ${text.tertiary} text-center py-2`}>
+                      Not part of any idea
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

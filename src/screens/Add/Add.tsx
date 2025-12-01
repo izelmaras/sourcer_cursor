@@ -22,7 +22,7 @@ type ContentType = {
 };
 
 export const Add = ({ open, onClose }: AddProps): JSX.Element => {
-  const { addAtom, addTag, addCreator, fetchTags, fetchCreators, fetchAtoms, tags, creators } = useAtomStore((state) => ({
+  const { addAtom, addTag, addCreator, fetchTags, fetchCreators, fetchAtoms, tags, creators, atoms, addChildAtom } = useAtomStore((state) => ({
     addAtom: state.addAtom,
     addTag: state.addTag,
     addCreator: state.addCreator,
@@ -30,7 +30,9 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
     fetchCreators: state.fetchCreators,
     fetchAtoms: state.fetchAtoms,
     tags: state.tags,
-    creators: state.creators
+    creators: state.creators,
+    atoms: state.atoms,
+    addChildAtom: state.addChildAtom
   }));
   const [selectedType, setSelectedType] = useState<string>("image");
   const [title, setTitle] = useState("");
@@ -43,6 +45,8 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
   const [tagSearch, setTagSearch] = useState("");
   const [selectedCreators, setSelectedCreators] = useState<string[]>([]);
   const [creatorSearch, setCreatorSearch] = useState("");
+  const [selectedIdeas, setSelectedIdeas] = useState<number[]>([]);
+  const [ideaSearch, setIdeaSearch] = useState("");
   const [locationAddress, setLocationAddress] = useState("");
   const [locationLatitude, setLocationLatitude] = useState<number | null>(null);
   const [locationLongitude, setLocationLongitude] = useState<number | null>(null);
@@ -50,7 +54,8 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
   useEffect(() => {
     fetchTags();
     fetchCreators();
-  }, [fetchTags, fetchCreators]);
+    fetchAtoms();
+  }, [fetchTags, fetchCreators, fetchAtoms]);
 
 
 
@@ -106,7 +111,7 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
       }
     }
 
-    await addAtom({
+    const newAtom = await addAtom({
       title: title || ' ',
       description,
       content_type: selectedType,
@@ -125,6 +130,24 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
       location_longitude: selectedType === 'location' ? locationLongitude : null,
     });
 
+    // Add atom to selected ideas
+    if (newAtom && selectedIdeas.length > 0) {
+      console.log('Adding atom to ideas:', { atomId: newAtom.id, ideaIds: selectedIdeas });
+      for (const ideaId of selectedIdeas) {
+        try {
+          console.log(`Adding atom ${newAtom.id} to idea ${ideaId}...`);
+          await addChildAtom(ideaId, newAtom.id);
+          console.log(`Successfully added atom ${newAtom.id} to idea ${ideaId}`);
+        } catch (error) {
+          console.error(`Error adding atom to idea ${ideaId}:`, error);
+          // Show alert to user
+          alert(`Failed to add atom to idea. Check console for details. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+    } else {
+      console.log('No ideas selected or atom not created:', { newAtom: !!newAtom, selectedIdeasCount: selectedIdeas.length });
+    }
+
     await fetchAtoms();
     resetForm();
     onClose();
@@ -142,6 +165,8 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
     setTagSearch("");
     setSelectedCreators([]);
     setCreatorSearch("");
+    setSelectedIdeas([]);
+    setIdeaSearch("");
     setLocationAddress("");
     setLocationLatitude(null);
     setLocationLongitude(null);
@@ -192,6 +217,17 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
     setSelectedCreators(selectedCreators.filter(c => c !== creator));
   };
 
+  const handleIdeaClick = (ideaId: number) => {
+    if (!selectedIdeas.includes(ideaId)) {
+      setSelectedIdeas([...selectedIdeas, ideaId]);
+    }
+    setIdeaSearch("");
+  };
+
+  const removeIdea = (ideaId: number) => {
+    setSelectedIdeas(selectedIdeas.filter(id => id !== ideaId));
+  };
+
   const filteredTags = tags
     .filter(tag => 
       tag.name.toLowerCase().includes(tagSearch.toLowerCase()) &&
@@ -213,6 +249,15 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
   const showCreateCreator = creatorSearch && 
     !creators.find(c => c.name.toLowerCase() === creatorSearch.toLowerCase()) &&
     !selectedCreators.includes(creatorSearch);
+
+  // Filter ideas (only show ideas, not the current atom being created)
+  const ideaAtoms = atoms.filter(atom => atom.content_type === 'idea');
+  const filteredIdeas = ideaAtoms
+    .filter(idea => 
+      idea.title?.toLowerCase().includes(ideaSearch.toLowerCase()) &&
+      !selectedIdeas.includes(idea.id)
+    )
+    .slice(0, 12);
 
   return (
     <Dialog.Root open={open} onOpenChange={onClose}>
@@ -405,6 +450,61 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
                             Create "{creatorSearch}"
                           </Button>
                         )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/80 mt-2 flex items-center gap-2">
+                      <LightbulbIcon className="h-4 w-4" />
+                      Add to Idea(s)
+                    </label>
+                    <Input
+                      placeholder="Search ideas..."
+                      value={ideaSearch}
+                      onChange={(e) => setIdeaSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (filteredIdeas.length > 0) {
+                            handleIdeaClick(filteredIdeas[0].id);
+                          }
+                        }
+                      }}
+                      inputSize="lg"
+                      color="glass"
+                    />
+
+                    {selectedIdeas.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedIdeas.map((ideaId) => {
+                          const idea = ideaAtoms.find(i => i.id === ideaId);
+                          return idea ? (
+                            <Button
+                              key={ideaId}
+                              size="sm"
+                              rightIcon={<XIcon className="h-4 w-4 ml-2" />}
+                              onClick={() => removeIdea(ideaId)}
+                              tabIndex={-1}
+                            >
+                              {idea.title}
+                            </Button>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+
+                    {ideaSearch && filteredIdeas.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {filteredIdeas.map((idea) => (
+                          <Button
+                            key={idea.id}
+                            size="sm"
+                            onClick={() => handleIdeaClick(idea.id)}
+                          >
+                            {idea.title}
+                          </Button>
+                        ))}
                       </div>
                     )}
                   </div>

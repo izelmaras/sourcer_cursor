@@ -221,6 +221,26 @@ export interface Database {
           created_at?: string | null
         }
       }
+      atom_relationships: {
+        Row: {
+          id: number
+          parent_atom_id: number
+          child_atom_id: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          parent_atom_id: number
+          child_atom_id: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          parent_atom_id?: number
+          child_atom_id?: number
+          created_at?: string | null
+        }
+      }
     }
   }
 }

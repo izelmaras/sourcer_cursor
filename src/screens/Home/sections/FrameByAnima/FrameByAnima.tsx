@@ -1,4 +1,4 @@
-import { LinkIcon } from "lucide-react";
+import { LinkIcon, LightbulbIcon, LayersIcon } from "lucide-react";
 import React, { useState, memo, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ContentBadge } from "../../../../components/ui/content-badge";
@@ -14,26 +14,29 @@ import Masonry from 'react-masonry-css';
 import { VideoThumbnail } from "../../../../components/ui/video-thumbnail";
 import { Button } from "../../../../components/ui/button";
 import { InlineDetail } from "../../../../components/ui/inline-detail";
+import { backgrounds, borders, text, radius } from "../../../../lib/design-tokens";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
 interface GallerySectionProps {
   searchTerm: string;
   selectedContentTypes: string[];
-  selectedCreators: string[];
-  showOnlyFavorites: boolean;
+  selectedCreator: string | null;
+  selectedIdea: number | null;
+  onIdeaFilterChange: (ideaId: number | null) => void;
 }
 
-const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites }: { 
+const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selectedCreator, selectedIdea, onIdeaFilterChange }: { 
   atoms: Atom[], 
   onSelect: (atom: Atom) => void,
   searchTerm?: string,
   selectedContentTypes?: string[],
-  selectedCreators?: string[],
-  showOnlyFavorites?: boolean
+  selectedCreator?: string | null,
+  selectedIdea?: number | null,
+  onIdeaFilterChange?: (ideaId: number | null) => void
 }) => {
   const navigate = useNavigate();
-  const { deletingIds, updateAtom, fetchAtoms } = useAtomStore();
+  const { deletingIds, updateAtom, fetchAtoms, fetchChildAtoms } = useAtomStore();
   const [visibleCount, setVisibleCount] = useState(12);
   const lastFilterRef = useRef<string>("");
   const [expandedAtomId, setExpandedAtomId] = useState<number | null>(null);
@@ -42,6 +45,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const lastLoadTimeRef = useRef<number>(0);
   const loadMoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [childAtomCounts, setChildAtomCounts] = useState<Map<number, number>>(new Map());
 
   // Constants for rate limiting
   const MIN_LOAD_INTERVAL = 1000; // Minimum 1 second between loads
@@ -53,8 +57,8 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     return JSON.stringify({
       searchTerm,
       selectedContentTypes,
-      selectedCreators,
-      showOnlyFavorites
+      selectedCreator,
+      selectedIdea
     });
   };
 
@@ -129,7 +133,33 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       setExpandedAtomId(null); // Close expanded view when filters change
       lastLoadTimeRef.current = 0; // Reset rate limiting
     }
-  }, [searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites]);
+  }, [searchTerm, selectedContentTypes, selectedCreator, selectedIdea]);
+
+  // Fetch child atom counts for idea atoms
+  useEffect(() => {
+    const fetchCounts = async () => {
+      const ideaAtoms = atoms.filter(atom => atom.content_type === 'idea');
+      const counts = new Map<number, number>();
+      
+      await Promise.all(
+        ideaAtoms.map(async (atom) => {
+          try {
+            const children = await fetchChildAtoms(atom.id);
+            counts.set(atom.id, children.length);
+          } catch (error) {
+            console.error(`Error fetching child atoms for idea ${atom.id}:`, error);
+            counts.set(atom.id, 0);
+          }
+        })
+      );
+      
+      setChildAtomCounts(counts);
+    };
+
+    if (atoms.length > 0) {
+      fetchCounts();
+    }
+  }, [atoms, fetchChildAtoms]);
 
   const handleAtomClick = (atom: Atom) => {
     if (expandedAtomId === atom.id) {
@@ -199,6 +229,9 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             hasNext={expandedIndex < Math.min(visibleCount, atoms.length) - 1}
             onUpdate={handleUpdateAtom}
             onDelete={handleDeleteAtom}
+            onOpenAtom={(atom) => {
+              handleAtomClick(atom);
+            }}
           />
         </div>
       )}
@@ -297,25 +330,23 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             );
           }
 
+          const isIdea = atom.content_type === 'idea';
+          const childCount = childAtomCounts.get(atom.id) || 0;
+
           return (
             <GalleryTile
               key={atom.id}
-              className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group bg-white/5 backdrop-blur-sm shadow-2xl border border-white/10 hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
+              className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group ${isIdea ? 'bg-gradient-to-br from-teal-500/10 via-teal-400/5 to-transparent border-teal-400/20' : 'bg-white/5 backdrop-blur-sm border border-white/10'} shadow-2xl hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
                 isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
               } ${isExpanded ? 'ring-2 ring-blue-500' : ''}`}
               onClick={() => handleAtomClick(atom)}
             >
-              <GalleryTileContent className={`relative px-4 pb-4 pt-2 sm:px-6 sm:pb-6 sm:pt-3 flex flex-col min-h-[120px] text-white`}>
+              <GalleryTileContent className={`relative px-4 pb-6 pt-4 sm:px-5 sm:pb-8 sm:pt-5 flex flex-col min-h-[120px] text-white`}>
                 {atom.content_type === 'link' && atom.link && (
                   <div className="mb-2 flex justify-center">
                     <LiveLinkPreview url={atom.link || ""} height={240}>
                       {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
-                        <img 
-                          src={(atom as any).ogImage} 
-                          alt={atom.title} 
-                          className="w-full h-40 object-cover rounded" 
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
+                        <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
                       ) : atom.link ? (
                         <img
                           src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
@@ -327,6 +358,19 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                     </LiveLinkPreview>
                   </div>
                 )}
+                {isIdea && (
+                  <div className={`mb-2 flex items-center gap-1.5 px-2 py-1 w-fit ${backgrounds.layer1} ${borders.secondary} ${radius.md} backdrop-blur-sm`}>
+                    <span className="text-xs font-medium text-white whitespace-nowrap">
+                      Idea
+                    </span>
+                    {childCount > 0 && (
+                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-white/20 flex-shrink-0">
+                        <LayersIcon className="h-3 w-3 text-white" />
+                        <span className="text-xs text-white whitespace-nowrap">{childCount}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex-1 flex flex-col gap-2">
                   {atom.title && atom.title !== ' ' && (
                     <div className="space-y-1">
@@ -334,10 +378,10 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                         {atom.title}
                       </h4>
                       {atom.description && (
-                        <div className="line-clamp-2">
+                        <div>
                           <HtmlContent 
                             html={atom.description} 
-                            className="text-sm sm:text-base break-words text-white/80"
+                            className="text-xs sm:text-sm break-words text-white/80"
                           />
                         </div>
                       )}
@@ -364,15 +408,6 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                     </div>
                   )}
                 </div>
-                <a
-                  href={atom.link || ""}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute bottom-3 right-3 rounded-full p-2 shadow hover:bg-white/20 transition z-10 border bg-white/10 backdrop-blur-sm border-white/20"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <LinkIcon className="w-4 h-4 text-white" />
-                </a>
               </GalleryTileContent>
             </GalleryTile>
           );
@@ -406,33 +441,47 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
 
 Gallery.displayName = 'Gallery';
 
-export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites }: GallerySectionProps): JSX.Element => {
-  const { atoms, selectedTags, categories, getCategoryTags, defaultCategoryId, favoriteCreators } = useAtomStore();
+export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreator, selectedIdea, onIdeaFilterChange }: GallerySectionProps): JSX.Element => {
+  const { atoms, selectedTags, categories, getCategoryTags, defaultCategoryId, fetchChildAtoms } = useAtomStore();
   const [selectedAtom, setSelectedAtom] = useState<Atom | null>(null);
+  const [ideaChildAtomIds, setIdeaChildAtomIds] = useState<Set<number>>(new Set());
+  const [isLoadingIdeaChildren, setIsLoadingIdeaChildren] = useState(false);
+
+  // Fetch child atoms when idea filter is selected
+  useEffect(() => {
+    const fetchChildren = async () => {
+      if (selectedIdea) {
+        setIsLoadingIdeaChildren(true);
+        try {
+          const children = await fetchChildAtoms(selectedIdea);
+          setIdeaChildAtomIds(new Set(children.map(c => c.id)));
+        } catch (error) {
+          console.error('Error fetching child atoms for idea filter:', error);
+          setIdeaChildAtomIds(new Set());
+        } finally {
+          setIsLoadingIdeaChildren(false);
+        }
+      } else {
+        setIdeaChildAtomIds(new Set());
+      }
+    };
+    fetchChildren();
+  }, [selectedIdea, fetchChildAtoms]);
 
   const filteredAtoms = useMemo(() => {
-    return atoms.filter(atom => {
+    let result = atoms.filter(atom => {
       const matchesSearch = searchTerm.toLowerCase() === '' || 
         atom.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         atom.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (atom.tags && atom.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
       const matchesType = selectedContentTypes.length === 0 || selectedContentTypes.includes(atom.content_type);
-      
-      // Multiple creators filter: atom matches if any selected creator is in atom's creator_name
-      const matchesCreator = selectedCreators.length === 0 || 
+      const matchesCreator =
+        !selectedCreator ||
         (atom.creator_name &&
           atom.creator_name
             .split(',')
             .map(name => name.trim())
-            .some(creatorName => selectedCreators.includes(creatorName)));
-      
-      // Show only favorites filter: atom matches if any creator in atom's creator_name is in favorites
-      const matchesFavorites = !showOnlyFavorites ||
-        (atom.creator_name &&
-          atom.creator_name
-            .split(',')
-            .map(name => name.trim())
-            .some(creatorName => favoriteCreators.includes(creatorName)));
+            .includes(selectedCreator));
       const atomTags = atom.tags || [];
       const isInPrivateCategory = categories.some(category => 
         category.is_private && 
@@ -455,7 +504,6 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
       return matchesSearch && 
              matchesType && 
              matchesCreator &&
-             matchesFavorites &&
              !isInPrivateCategory &&
              !selectedTagsInPrivateCategories &&
              matchesDefaultCategory &&
@@ -463,7 +511,14 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
              matchesNoTag &&
              (selectedTags.length === 0 || selectedTags.every(tag => tag === 'flagged' || tag === 'no-tag' || atomTags.includes(tag)));
     });
-  }, [atoms, searchTerm, selectedContentTypes, selectedCreators, showOnlyFavorites, favoriteCreators, selectedTags, categories, defaultCategoryId, getCategoryTags]);
+
+    // Filter by idea: if selectedIdea is set, only show atoms that are children of that idea
+    if (selectedIdea && !isLoadingIdeaChildren) {
+      result = result.filter(atom => ideaChildAtomIds.has(atom.id));
+    }
+
+    return result;
+  }, [atoms, searchTerm, selectedContentTypes, selectedCreator, selectedTags, categories, defaultCategoryId, selectedIdea, ideaChildAtomIds, isLoadingIdeaChildren, getCategoryTags]);
 
   return (
     <Gallery 
@@ -471,8 +526,9 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
       onSelect={setSelectedAtom}
       searchTerm={searchTerm}
       selectedContentTypes={selectedContentTypes}
-      selectedCreators={selectedCreators}
-      showOnlyFavorites={showOnlyFavorites}
+      selectedCreator={selectedCreator}
+      selectedIdea={selectedIdea}
+      onIdeaFilterChange={onIdeaFilterChange}
     />
   );
 };
