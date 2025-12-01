@@ -46,6 +46,9 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
   const lastLoadTimeRef = useRef<number>(0);
   const loadMoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [childAtomCounts, setChildAtomCounts] = useState<Map<number, number>>(new Map());
+  const [currentIdeaChildAtoms, setCurrentIdeaChildAtoms] = useState<Atom[]>([]);
+  const [isLoadingChildAtoms, setIsLoadingChildAtoms] = useState(false);
+  const [currentParentIdeaId, setCurrentParentIdeaId] = useState<number | null>(null);
 
   // Constants for rate limiting
   const MIN_LOAD_INTERVAL = 1000; // Minimum 1 second between loads
@@ -161,31 +164,105 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     }
   }, [atoms, fetchChildAtoms]);
 
-  const handleAtomClick = (atom: Atom) => {
+  const handleAtomClick = async (atom: Atom) => {
     if (expandedAtomId === atom.id) {
       setExpandedAtomId(null); // Close if already expanded
+      setCurrentIdeaChildAtoms([]);
     } else {
       setExpandedAtomId(atom.id); // Expand this atom
       // Scroll to top smoothly when opening
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // If it's an idea, fetch its child atoms for navigation
+      if (atom.content_type === 'idea') {
+        setCurrentParentIdeaId(atom.id);
+        setIsLoadingChildAtoms(true);
+        try {
+          const children = await fetchChildAtoms(atom.id);
+          setCurrentIdeaChildAtoms(children);
+        } catch (error) {
+          console.error('Error fetching child atoms:', error);
+          setCurrentIdeaChildAtoms([]);
+        } finally {
+          setIsLoadingChildAtoms(false);
+        }
+      } else {
+        // Check if this atom is a child of an idea we're viewing
+        // If so, keep the parent idea context
+        const isChildOfCurrentIdea = currentIdeaChildAtoms.some(child => child.id === atom.id);
+        if (!isChildOfCurrentIdea) {
+          setCurrentParentIdeaId(null);
+          setCurrentIdeaChildAtoms([]);
+        }
+      }
     }
     onSelect(atom);
   };
 
   const handleCloseExpanded = () => {
     setExpandedAtomId(null);
+    setCurrentIdeaChildAtoms([]);
+    setCurrentParentIdeaId(null);
   };
 
-  const handleNavigateExpanded = (direction: 'prev' | 'next') => {
-    const currentIndex = atoms.findIndex(atom => atom.id === expandedAtomId);
-    if (currentIndex === -1) return;
+  const handleNavigateExpanded = async (direction: 'prev' | 'next') => {
+    if (!expandedAtomId) return;
     
-    const newIndex = direction === 'prev' 
-      ? (currentIndex - 1 + atoms.length) % atoms.length
-      : (currentIndex + 1) % atoms.length;
+    const expandedAtom = atoms.find(atom => atom.id === expandedAtomId);
     
-    const newAtom = atoms[newIndex];
-    setExpandedAtomId(newAtom.id);
+    // If we have a parent idea context, navigate through its children
+    if (currentParentIdeaId && currentIdeaChildAtoms.length > 0) {
+      const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === currentParentIdeaId;
+      const currentChildIndex = currentIdeaChildAtoms.findIndex(atom => atom.id === expandedAtomId);
+      
+      if (isViewingIdea) {
+        // Navigating from the idea itself - go to first/last child
+        if (direction === 'next') {
+          const firstChild = currentIdeaChildAtoms[0];
+          setExpandedAtomId(firstChild.id);
+        } else {
+          const lastChild = currentIdeaChildAtoms[currentIdeaChildAtoms.length - 1];
+          setExpandedAtomId(lastChild.id);
+        }
+      } else if (currentChildIndex !== -1) {
+        // Navigating through child atoms
+        const newIndex = direction === 'prev' 
+          ? (currentChildIndex - 1 + currentIdeaChildAtoms.length) % currentIdeaChildAtoms.length
+          : (currentChildIndex + 1) % currentIdeaChildAtoms.length;
+        
+        const newAtom = currentIdeaChildAtoms[newIndex];
+        setExpandedAtomId(newAtom.id);
+      }
+    } else {
+      // Normal navigation through all atoms
+      const currentIndex = atoms.findIndex(atom => atom.id === expandedAtomId);
+      if (currentIndex === -1) return;
+      
+      const newIndex = direction === 'prev' 
+        ? (currentIndex - 1 + atoms.length) % atoms.length
+        : (currentIndex + 1) % atoms.length;
+      
+      const newAtom = atoms[newIndex];
+      setExpandedAtomId(newAtom.id);
+      
+      // If the new atom is an idea, fetch its child atoms
+      if (newAtom.content_type === 'idea') {
+        setCurrentParentIdeaId(newAtom.id);
+        setIsLoadingChildAtoms(true);
+        try {
+          const children = await fetchChildAtoms(newAtom.id);
+          setCurrentIdeaChildAtoms(children);
+        } catch (error) {
+          console.error('Error fetching child atoms:', error);
+          setCurrentIdeaChildAtoms([]);
+        } finally {
+          setIsLoadingChildAtoms(false);
+        }
+      } else {
+        setCurrentParentIdeaId(null);
+        setCurrentIdeaChildAtoms([]);
+      }
+    }
   };
 
   const handleUpdateAtom = async (updatedAtom: Atom) => {
@@ -213,8 +290,30 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       .join(' ');
   };
 
-  const expandedAtom = expandedAtomId ? atoms.find(atom => atom.id === expandedAtomId) : null;
+  // Find expanded atom - check both main atoms array and current idea's child atoms
+  const expandedAtom = expandedAtomId 
+    ? atoms.find(atom => atom.id === expandedAtomId) || 
+      currentIdeaChildAtoms.find(atom => atom.id === expandedAtomId) || 
+      null
+    : null;
   const expandedIndex = expandedAtom ? atoms.findIndex(atom => atom.id === expandedAtomId) : -1;
+  
+  // Determine navigation state based on whether we're in an idea context
+  const isInIdeaContext = currentParentIdeaId !== null && currentIdeaChildAtoms.length > 0;
+  const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === currentParentIdeaId;
+  const currentChildIndex = isInIdeaContext
+    ? currentIdeaChildAtoms.findIndex(atom => atom.id === expandedAtomId)
+    : -1;
+  
+  // If in idea context, navigation is through its children
+  // Otherwise, normal navigation through all atoms
+  const hasPrevious = isInIdeaContext
+    ? isViewingIdea || currentChildIndex > 0 // Can navigate to children or previous child
+    : expandedIndex > 0;
+  
+  const hasNext = isInIdeaContext
+    ? isViewingIdea || currentChildIndex < currentIdeaChildAtoms.length - 1 // Can navigate to children or next child
+    : expandedIndex < Math.min(visibleCount, atoms.length) - 1;
 
   return (
     <div className="w-full space-y-6">
@@ -225,12 +324,21 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             atom={expandedAtom}
             onClose={handleCloseExpanded}
             onNavigate={handleNavigateExpanded}
-            hasPrevious={expandedIndex > 0}
-            hasNext={expandedIndex < Math.min(visibleCount, atoms.length) - 1}
+            hasPrevious={hasPrevious}
+            hasNext={hasNext}
             onUpdate={handleUpdateAtom}
             onDelete={handleDeleteAtom}
-            onOpenAtom={(atom) => {
-              handleAtomClick(atom);
+            onOpenAtom={async (atom) => {
+              // Maintain idea context if clicking a child atom from the current idea
+              if (currentParentIdeaId && currentIdeaChildAtoms.some(child => child.id === atom.id)) {
+                setExpandedAtomId(atom.id);
+                // Scroll to top smoothly when opening
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                onSelect(atom);
+              } else {
+                // Open atom normally, which will reset idea context if needed
+                await handleAtomClick(atom);
+              }
             }}
           />
         </div>
