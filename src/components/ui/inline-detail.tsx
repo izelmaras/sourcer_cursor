@@ -880,6 +880,16 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                           navigate(`/detail/${childAtom.id}`);
                         }
                       }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        // Right-click does the same as left-click
+                        if (onOpenAtom) {
+                          onOpenAtom(childAtom);
+                        } else {
+                          onClose();
+                          navigate(`/detail/${childAtom.id}`);
+                        }
+                      }}
                     >
                       {/* Preview Image/Media */}
                       {childAtom.media_source_link ? (
@@ -982,10 +992,12 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     }
                   }}
                   size="sm"
-                  title={isEditingParentIdeas ? "Close edit mode" : "Edit ideas"}
+                  title={isEditingParentIdeas ? "Close edit mode" : parentIdeas.length === 0 ? "Add to idea" : "Edit ideas"}
                 >
                   {isEditingParentIdeas ? (
                     <XIcon className={`w-3 h-3 ${icons.primary}`} />
+                  ) : parentIdeas.length === 0 ? (
+                    <PlusIcon className={`w-3 h-3 ${icons.primary}`} />
                   ) : (
                     <PencilIcon className={`w-3 h-3 ${icons.primary}`} />
                   )}
@@ -1010,9 +1022,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     />
                     {availableIdeasForParents.length > 0 ? (
                       <div className="max-h-32 overflow-y-auto space-y-1 mt-2">
-                        <div className={`text-xs ${text.tertiary} mb-1`}>
-                          Click an idea to add this atom to it:
-                        </div>
                         {availableIdeasForParents.slice(0, 10).map((idea) => (
                           <div
                             key={idea.id}
@@ -1105,11 +1114,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className={`text-xs ${text.tertiary} text-center py-2`}>
-                      Not part of any idea
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
