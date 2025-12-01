@@ -6,6 +6,30 @@ This document provides a complete reference for all styling patterns, colors, an
 
 All styling is centralized in `src/lib/design-tokens.ts`. This ensures consistency across the entire application.
 
+## Typography
+
+### Font Family
+
+**Source Code Pro** is used for all text throughout the application. This monospace font provides a consistent, technical aesthetic that aligns with the application's design language.
+
+- **Font**: Source Code Pro (from Google Fonts)
+- **Fallback**: System monospace fonts
+- **Usage**: All body text, buttons, headers, inputs, and UI elements
+
+The font is loaded from Google Fonts and configured via CSS variables:
+- `--body-font-family`: "Source Code Pro", monospace
+- `--button-font-family`: "Source Code Pro", monospace
+- `--x-small-header-font-family`: "Source Code Pro", monospace
+
+### Font Weights
+
+| Weight | Value | Usage |
+|--------|-------|-------|
+| Regular | 400 | Body text, default content |
+| Medium | 500 | Buttons, emphasized text |
+| Semi-bold | 600 | Headers, labels |
+| Bold | 700 | Strong emphasis (if needed) |
+
 ## Quick Reference
 
 ### Import Design Tokens
@@ -23,7 +47,8 @@ import {
   searchBar,
   textarea,
   tags,
-  dropdowns
+  dropdowns,
+  typography
 } from '@/lib/design-tokens';
 ```
 

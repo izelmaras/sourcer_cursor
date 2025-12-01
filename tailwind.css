@@ -8,20 +8,20 @@
 }
 
 :root {
-  --body-font-family: "Plus Jakarta Sans", Helvetica;
+  --body-font-family: "Source Code Pro", monospace;
   --body-font-size: 14px;
   --body-font-style: normal;
   --body-font-weight: 400;
   --body-letter-spacing: 0px;
   --body-line-height: 140%;
-  --button-font-family: "Plus Jakarta Sans", Helvetica;
+  --button-font-family: "Source Code Pro", monospace;
   --button-font-size: 14px;
   --button-font-style: normal;
   --button-font-weight: 500;
   --button-letter-spacing: 0px;
   --button-line-height: 29px;
   --white-white-ffffff: rgba(255, 255, 255, 1);
-  --x-small-header-font-family: "Plus Jakarta Sans", Helvetica;
+  --x-small-header-font-family: "Source Code Pro", monospace;
   --x-small-header-font-size: 14px;
   --x-small-header-font-style: normal;
   --x-small-header-font-weight: 600;
@@ -103,6 +103,28 @@ html {
   animation: float 3s ease-in-out infinite;
 }
 
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOutSlideDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
 /* Glassmorphism base styles */
 .glass {
   background: rgba(255, 255, 255, 0.1);
@@ -158,6 +180,7 @@ html {
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--body-font-family);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 

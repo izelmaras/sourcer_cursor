@@ -173,7 +173,7 @@ export const AddAndNavigationByAnima = ({
               className={`w-14 h-14 flex items-center justify-center rounded-full border-2 transition-all duration-300 hover:scale-105 aspect-square ${
                 searchMode === 'creators'
                   ? 'border-white/30 bg-white/15 text-white'
-                  : 'border-white/10 bg-white/5 hover:bg-white/8 text-white'
+                  : 'border-white/10 bg-white/8 hover:bg-white/10 text-white'
               }`}
               title={searchMode === 'search' ? 'Switch to creator search' : 'Switch to content search'}
             >
@@ -191,7 +191,7 @@ export const AddAndNavigationByAnima = ({
                 className={`w-14 h-14 flex items-center justify-center rounded-full border-2 transition-all duration-300 hover:scale-105 aspect-square ${
                   selectedContentTypes.length > 0
                     ? 'border-white/30 bg-white/15 text-white'
-                    : 'border-white/10 bg-white/5 hover:bg-white/8 text-white'
+                    : 'border-white/10 bg-white/8 hover:bg-white/10 text-white'
                 }`}
               >
                 <FilterIcon className="h-5 w-5" />
@@ -202,7 +202,7 @@ export const AddAndNavigationByAnima = ({
                 )}
               </button>
               {isFilterDropdownOpen && (
-                <div data-filter-dropdown className="absolute top-full right-0 mt-2 backdrop-blur-xl border border-white/40 rounded-3xl shadow-2xl z-50 min-w-48 max-h-64 overflow-y-auto" style={{ backgroundColor: 'rgba(149, 153, 160, 0.95)' }}>
+                <div data-filter-dropdown className="absolute top-full right-0 mt-2 backdrop-blur-xl border border-white/40 rounded-3xl shadow-2xl z-50 min-w-48 max-h-64 overflow-y-auto" style={{ backgroundColor: 'rgba(180, 185, 190, 0.95)' }}>
                   <div className="p-3">
                     {contentTypes.map(ct => (
                       <button
@@ -229,13 +229,13 @@ export const AddAndNavigationByAnima = ({
             </div>
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('openOrganize'))}
-              className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/8 text-white transition-all duration-300 hover:scale-105 aspect-square"
+              className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/10 bg-white/8 backdrop-blur-sm hover:bg-white/10 text-white transition-all duration-300 hover:scale-105 aspect-square"
             >
               <FolderIcon className="h-5 w-5" />
             </button>
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('openAdd'))}
-              className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/8 text-white transition-all duration-300 hover:scale-105 aspect-square"
+              className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/10 bg-white/8 backdrop-blur-sm hover:bg-white/10 text-white transition-all duration-300 hover:scale-105 aspect-square"
             >
               <PlusIcon className="h-5 w-5" />
             </button>
@@ -262,8 +262,8 @@ export const AddAndNavigationByAnima = ({
                   onClick={() => setDefaultCategory(defaultCategoryId === category.id ? null : category.id)}
                   className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-300 border backdrop-blur-sm ${
                     defaultCategoryId === category.id
-                      ? 'bg-white/20 border-white/30 text-white shadow-lg'
-                      : 'bg-white/5 hover:bg-white/8 text-white border-white/10 hover:border-white/20'
+                      ? 'bg-white/20 border-white/30 text-white'
+                      : 'bg-white/8 hover:bg-white/10 text-white border-white/10 hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -313,7 +313,7 @@ export const AddAndNavigationByAnima = ({
                 const isSelected = selectedTags.includes(tag.name);
                 const withCountBase = tags?.variants?.withCount?.base?.className || 'px-3 py-1.5 text-sm rounded-2xl transition-all duration-200 flex items-center gap-2';
                 const withCountSelected = tags?.variants?.withCount?.selected?.className || 'bg-white/20 text-white border border-white/30';
-                const withCountUnselected = tags?.variants?.withCount?.unselected?.className || 'bg-white/5 text-white border border-white/10 hover:bg-white/8 hover:text-white';
+                const withCountUnselected = tags?.variants?.withCount?.unselected?.className || 'bg-white/8 text-white border border-white/10 hover:bg-white/10 hover:text-white';
                 const badgeSelected = tags?.variants?.withCount?.badge?.selected?.className || 'px-1.5 py-0.5 text-xs rounded-full bg-white/20 text-white';
                 const badgeUnselected = tags?.variants?.withCount?.badge?.unselected?.className || 'px-1.5 py-0.5 text-xs rounded-full bg-white/8 text-white/80';
                 
@@ -340,7 +340,7 @@ export const AddAndNavigationByAnima = ({
       </div>
 
       {isFiltersExpanded && (
-        <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-2xl">
+        <div className="bg-white/8 backdrop-blur-sm rounded-3xl border border-white/10 shadow-2xl">
           <div className="p-6 space-y-6">
             {/* Content Types */}
             <div className="flex flex-wrap gap-2">

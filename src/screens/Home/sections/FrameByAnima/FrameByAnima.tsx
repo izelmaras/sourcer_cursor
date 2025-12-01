@@ -1,4 +1,4 @@
-import { LinkIcon, LightbulbIcon, LayersIcon } from "lucide-react";
+import { LinkIcon, LightbulbIcon, LayersIcon, FilmIcon } from "lucide-react";
 import React, { useState, memo, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ContentBadge } from "../../../../components/ui/content-badge";
@@ -220,7 +220,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     <div className="w-full space-y-6">
       {/* Expanded Content Banner */}
       {expandedAtom && (
-        <div className="w-full">
+        <div className="w-full animate-[fadeInSlideUp_0.2s_ease-out]">
           <InlineDetail
             atom={expandedAtom}
             onClose={handleCloseExpanded}
@@ -263,7 +263,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                 key={atom.id}
                 className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group bg-white/5 backdrop-blur-sm shadow-2xl border border-white/10 hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
                   isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
-                } ${isExpanded ? 'ring-2 ring-blue-500' : ''}`}
+                } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
                 onClick={() => handleAtomClick(atom)}
               >
                                   {hasMedia && (
@@ -304,7 +304,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                 key={atom.id}
                 className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group bg-white/5 backdrop-blur-sm shadow-2xl border border-white/10 hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
                   isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
-                } ${isExpanded ? 'ring-2 ring-blue-500' : ''}`}
+                } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
                 onClick={() => handleAtomClick(atom)}
               >
                 <div className="relative w-full aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
@@ -331,14 +331,15 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
           }
 
           const isIdea = atom.content_type === 'idea';
+          const isMovie = atom.content_type === 'movie';
           const childCount = childAtomCounts.get(atom.id) || 0;
 
           return (
             <GalleryTile
               key={atom.id}
-              className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group ${isIdea ? 'bg-gradient-to-br from-teal-500/10 via-teal-400/5 to-transparent border-teal-400/20' : 'bg-white/5 backdrop-blur-sm border border-white/10'} shadow-2xl hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
+              className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group ${isIdea ? 'bg-gradient-to-br from-orange-400/10 via-orange-300/5 to-transparent border-orange-300/20' : 'bg-white/5 backdrop-blur-sm border border-white/10'} shadow-2xl hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
                 isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
-              } ${isExpanded ? 'ring-2 ring-blue-500' : ''}`}
+              } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
               onClick={() => handleAtomClick(atom)}
             >
               <GalleryTileContent className={`relative px-4 pb-6 pt-4 sm:px-5 sm:pb-8 sm:pt-5 flex flex-col min-h-[120px] text-white`}>
@@ -369,6 +370,14 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                         <span className="text-xs text-white whitespace-nowrap">{childCount}</span>
                       </div>
                     )}
+                  </div>
+                )}
+                {isMovie && (
+                  <div className={`mb-2 flex items-center gap-1.5 px-2 py-1 w-fit ${backgrounds.layer1} ${borders.secondary} ${radius.md} backdrop-blur-sm`}>
+                    <FilmIcon className="h-3 w-3 text-white" />
+                    <span className="text-xs font-medium text-white whitespace-nowrap">
+                      Movie
+                    </span>
                   </div>
                 )}
                 <div className="flex-1 flex flex-col gap-2">
@@ -470,6 +479,11 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
 
   const filteredAtoms = useMemo(() => {
     let result = atoms.filter(atom => {
+      // Exclude hidden atoms from the grid (treat null/undefined as visible)
+      if (atom.hidden === true) {
+        return false;
+      }
+      
       const matchesSearch = searchTerm.toLowerCase() === '' || 
         atom.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         atom.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||

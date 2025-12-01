@@ -2,9 +2,12 @@
  * DESIGN TOKENS - Centralized Style System
  * 
  * This file contains all design tokens for colors, backgrounds, borders,
- * corner radius, icons, and other styling patterns used throughout the app.
+ * corner radius, icons, typography, and other styling patterns used throughout the app.
  * 
  * All components should reference these tokens for consistency.
+ * 
+ * Typography: Source Code Pro is used for all text throughout the application.
+ * The font is loaded from Google Fonts and configured via CSS variables.
  */
 
 // ============================================================================
@@ -80,6 +83,55 @@ export const borders = {
     primary: 'border-gray-200',
     secondary: 'border-gray-300',
     focus: 'border-blue-500',
+  }
+};
+
+// ============================================================================
+// TYPOGRAPHY
+// ============================================================================
+export const typography = {
+  // Font family - Source Code Pro for all text
+  fontFamily: {
+    body: 'font-[var(--body-font-family)]',      // Uses "Source Code Pro", monospace
+    button: 'font-[var(--button-font-family)]',  // Uses "Source Code Pro", monospace
+    header: 'font-[var(--x-small-header-font-family)]', // Uses "Source Code Pro", monospace
+    default: 'font-sans',                        // Tailwind default (Source Code Pro via config)
+  },
+  
+  // Font weights
+  weight: {
+    normal: 'font-normal',     // 400
+    medium: 'font-medium',     // 500
+    semibold: 'font-semibold', // 600
+    bold: 'font-bold',         // 700
+  },
+  
+  // Font sizes (using Tailwind defaults)
+  size: {
+    xs: 'text-xs',    // 12px
+    sm: 'text-sm',    // 14px
+    base: 'text-base', // 16px
+    lg: 'text-lg',    // 18px
+    xl: 'text-xl',    // 20px
+    '2xl': 'text-2xl', // 24px
+    '3xl': 'text-3xl', // 30px
+  },
+  
+  // Legacy scale (for backward compatibility with typography component)
+  scale: {
+    h1: 'text-base font-semibold leading-relaxed',
+    h2: 'text-base font-semibold leading-relaxed',
+    h3: 'text-base font-semibold leading-relaxed',
+    body: 'text-base leading-relaxed',
+    small: 'text-base leading-relaxed',
+    caption: 'text-base leading-relaxed',
+  },
+  
+  // Text colors (for backward compatibility)
+  colors: {
+    primary: 'text-white',      // Main text
+    secondary: 'text-white/80',  // Secondary text
+    muted: 'text-white/60',     // Muted text
   }
 };
 
@@ -457,21 +509,6 @@ export const utilities = {
 // ============================================================================
 // LEGACY EXPORTS (for backward compatibility)
 // ============================================================================
-export const typography = {
-  scale: {
-    h1: 'text-base font-semibold leading-relaxed',
-    h2: 'text-base font-semibold leading-relaxed',
-    h3: 'text-base font-semibold leading-relaxed',
-    body: 'text-base leading-relaxed',
-    small: 'text-base leading-relaxed',
-    caption: 'text-base leading-relaxed',
-  },
-  colors: {
-    primary: text.primary,
-    secondary: text.secondary,
-    muted: text.muted,
-  }
-};
 
 export const colors = {
   background: {

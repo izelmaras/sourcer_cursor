@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon, FilterIcon, LightbulbIcon, MinusIcon, PlusIcon, LayersIcon } from "lucide-react";
+import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon, FilterIcon, LightbulbIcon, MinusIcon, PlusIcon, LayersIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { Database } from '../../types/supabase';
 import { useAtomStore } from "../../store/atoms";
 import { IconButton } from "./icon-button";
@@ -78,6 +78,8 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   const [selectedParentIdeas, setSelectedParentIdeas] = useState<number[]>([]);
   const [childAtomCount, setChildAtomCount] = useState<number>(0);
   const [isLoadingChildCount, setIsLoadingChildCount] = useState(false);
+  const [childAtoms, setChildAtoms] = useState<Atom[]>([]);
+  const [isLoadingChildAtoms, setIsLoadingChildAtoms] = useState(false);
 
   useEffect(() => {
     fetchTags();
@@ -175,6 +177,54 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
       fetchChildCount();
     }
   }, [atom?.id, atom?.content_type, fetchChildAtoms]);
+
+  // Fetch child atoms list for ideas
+  useEffect(() => {
+    const fetchChildren = async () => {
+      if (atom?.id && atom.content_type === 'idea') {
+        setIsLoadingChildAtoms(true);
+        try {
+          const children = await fetchChildAtoms(atom.id);
+          setChildAtoms(children);
+        } catch (error) {
+          console.error('Error fetching child atoms list:', error);
+          setChildAtoms([]);
+        } finally {
+          setIsLoadingChildAtoms(false);
+        }
+      } else {
+        setChildAtoms([]);
+      }
+    };
+    if (atom?.id) {
+      fetchChildren();
+    }
+  }, [atom?.id, atom?.content_type, fetchChildAtoms]);
+
+  // Check if all child atoms are hidden (treat null as false)
+  const allChildAtomsHidden = childAtoms.length > 0 && childAtoms.every(a => a.hidden === true);
+
+  // Hide/show all child atoms of an idea
+  const handleToggleHideAllChildAtoms = async () => {
+    if (!atom?.id || atom.content_type !== 'idea' || childAtoms.length === 0) return;
+    
+    try {
+      const hideValue = !allChildAtomsHidden;
+      const childAtomIds = childAtoms.map(c => c.id);
+      
+      // Update all child atoms in the database - updateAtom already updates the store
+      await Promise.all(
+        childAtomIds.map(id => updateAtom(id, { hidden: hideValue }))
+      );
+      
+      // Update local childAtoms state immediately
+      setChildAtoms(prev => prev.map(a => ({ ...a, hidden: hideValue })));
+      
+      // The store is already updated by updateAtom, so the grid should automatically filter them out
+    } catch (error) {
+      console.error('Error toggling hide all child atoms:', error);
+    }
+  };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft' && hasPrevious) {
@@ -349,6 +399,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
     }
   };
 
+
   const availableIdeasForParents = React.useMemo(() => {
     if (!atom || atom.content_type === 'idea') return [];
     const parentIds = new Set(parentIdeas.map(p => p.id));
@@ -401,7 +452,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
   if (!atom) return null;
 
-  const hasMedia = atom.media_source_link && (atom.content_type === 'image' || atom.content_type === 'video');
+  const hasMedia = atom.media_source_link && (atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie');
   const isVideo = hasMedia && isVideoUrl(atom.media_source_link || '');
 
   const filteredTags = tags
@@ -442,7 +493,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   const isIdea = atom.content_type === 'idea';
   
   return (
-    <div className={`${isIdea ? 'bg-gradient-to-br from-teal-500/10 via-teal-400/5 to-transparent border-teal-400/20' : `${backgrounds.layer2Strong} ${borders.tertiary}`} ${radius.md} shadow-2xl overflow-hidden`}>
+    <div className={`${isIdea ? 'bg-gradient-to-br from-orange-400/10 via-orange-300/5 to-transparent border-orange-300/20' : `${backgrounds.layer2Strong} ${borders.tertiary}`} ${radius.md} shadow-2xl overflow-y-auto max-h-[90vh] border border-white/30`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-white/5 gap-3">
         <div className="flex-1 min-w-0">
@@ -469,6 +520,27 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                   <span className={`text-xs ${text.primary}`}>{childAtomCount}</span>
                 )}
               </div>
+            </IconButton>
+          )}
+
+          {/* Hide/Show all inspirations for ideas */}
+          {atom?.content_type === 'idea' && (
+            <IconButton 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Eye icon clicked!', { childAtomsLength: childAtoms.length });
+                handleToggleHideAllChildAtoms();
+              }}
+              size="sm"
+              title={allChildAtomsHidden ? "Show all inspirations in grid" : "Hide all inspirations from grid"}
+              disabled={childAtoms.length === 0}
+            >
+              {allChildAtomsHidden ? (
+                <EyeOffIcon className={`w-4 h-4 ${icons.primary}`} />
+              ) : (
+                <EyeIcon className={`w-4 h-4 ${icons.primary}`} />
+              )}
             </IconButton>
           )}
           
@@ -727,7 +799,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
 
                 {/* Prompt field - only show for image and video types */}
-                {(atom.content_type === 'image' || atom.content_type === 'video') && (
+                {(atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie') && (
                   <div>
                     <label className={`block text-sm font-medium ${text.primary} mb-2`}>Prompt</label>
                     <textarea
@@ -744,11 +816,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           )}
           
           {hasMedia && (
-            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} min-h-[200px]`}>
+            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} max-h-[60vh] w-full`}>
               {isVideo ? (
                 <VideoPlayer
                   src={atom.media_source_link || ''}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full max-h-[60vh] object-contain"
                   controls={true}
                   autoPlay={false}
                   muted={false}
@@ -757,26 +829,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 <img
                   src={atom.media_source_link || '/placeholder-image.png'}
                   alt={atom.title || 'Media'}
-                  className="w-full h-full object-contain"
-                  onLoad={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    const container = img.parentElement;
-                    if (container && img.naturalWidth && img.naturalHeight) {
-                      const aspectRatio = img.naturalWidth / img.naturalHeight;
-                      const containerWidth = container.clientWidth;
-                      const containerHeight = container.clientHeight;
-                      
-                      // If image is wider than container aspect ratio, fit to width
-                      if (aspectRatio > containerWidth / containerHeight) {
-                        img.style.width = '100%';
-                        img.style.height = 'auto';
-                      } else {
-                        // If image is taller, fit to height
-                        img.style.width = 'auto';
-                        img.style.height = '100%';
-                      }
-                    }
-                  }}
+                  className="w-full h-auto max-h-[60vh] object-contain"
                   onError={(e) => {
                     const img = e.currentTarget;
                     img.src = '/placeholder-image.png';
@@ -794,8 +847,86 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
             </div>
           )}
 
-          {/* Prompt - only show for image and video types if populated (non-edit mode) */}
-          {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video') && (
+          {/* Inspirations - Only for idea atoms, shown as previews below description */}
+          {atom?.content_type === 'idea' && (
+            <div className="mb-6">
+              <h3 className={`text-sm font-medium ${text.primary} mb-3`}>
+                Inspirations
+                {isLoadingChildAtoms && <span className="text-xs text-white/50">(loading...)</span>}
+              </h3>
+              {isLoadingChildAtoms ? (
+                <div className={`text-xs ${text.tertiary} text-center py-2`}>Loading...</div>
+              ) : childAtoms.length > 0 ? (
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                  {childAtoms.map((childAtom) => {
+                    // Generate consistent random rotation between -15 and 15 degrees based on atom ID
+                    const rotation = ((childAtom.id * 137.508) % 30) - 15;
+                    return (
+                    <div
+                      key={childAtom.id}
+                      className={`group cursor-pointer ${backgrounds.layer2} ${borders.secondary} ${radius.md} overflow-hidden transition-all duration-300 ${backgrounds.hover.layer1} relative aspect-square ${utilities.shadow.lg}`}
+                      style={{ transform: `rotate(${rotation}deg)` }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = `rotate(${rotation}deg) scale(1.05)`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = `rotate(${rotation}deg)`;
+                      }}
+                      onClick={() => {
+                        if (onOpenAtom) {
+                          onOpenAtom(childAtom);
+                        } else {
+                          onClose();
+                          navigate(`/detail/${childAtom.id}`);
+                        }
+                      }}
+                    >
+                      {/* Preview Image/Media */}
+                      {childAtom.media_source_link ? (
+                        <div className="absolute inset-0 w-full h-full">
+                          {childAtom.content_type === 'image' ? (
+                            <img
+                              src={childAtom.media_source_link}
+                              alt={childAtom.title || 'Untitled'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : childAtom.content_type === 'video' && isVideoUrl(childAtom.media_source_link) ? (
+                            <VideoPlayer
+                              url={childAtom.media_source_link}
+                              autoplay={false}
+                              controls={false}
+                              className="w-full h-full"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-yellow-400/30 via-yellow-300/20 via-amber-300/15 to-yellow-400/25"></div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-yellow-400/30 via-yellow-300/20 via-amber-300/15 to-yellow-400/25"></div>
+                      )}
+                      {/* Title Overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/15 to-transparent">
+                        <div className={`text-sm font-medium ${text.primary} line-clamp-2 break-words overflow-hidden`}>
+                          {childAtom.title || 'Untitled'}
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={`text-xs ${text.tertiary} text-center py-2`}>
+                  No inspirations
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Prompt - only show for image, video, and movie types if populated (non-edit mode) */}
+          {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie') && (
             <div className="mb-4">
               <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Prompt</h3>
               <p className={`text-sm ${text.secondary} leading-relaxed ${backgrounds.layer2} p-3 ${radius.md} ${borders.tertiary}`}>
@@ -983,6 +1114,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
               )}
             </div>
           )}
+
 
           {/* Content Type */}
           <div className="mb-6">

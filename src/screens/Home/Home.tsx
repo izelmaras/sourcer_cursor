@@ -34,6 +34,28 @@ export const Home = (): JSX.Element => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isOrganizeOpen, setIsOrganizeOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [searchMode, setSearchMode] = useState<'search' | 'creators'>('search');
+  const [selectedCreators, setSelectedCreators] = useState<string[]>([]);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+
+  // Sync selectedCreators with selectedCreator (for GallerySection compatibility)
+  // This syncs when selectedCreator changes from external sources (like Organize component)
+  useEffect(() => {
+    if (selectedCreator && !selectedCreators.includes(selectedCreator)) {
+      setSelectedCreators([selectedCreator]);
+    } else if (!selectedCreator && selectedCreators.length > 0) {
+      setSelectedCreators([]);
+    }
+  }, [selectedCreator]);
+
+  // Sync selectedCreator with selectedCreators (when creators change from AddAndNavigationByAnima)
+  useEffect(() => {
+    if (selectedCreators.length > 0 && selectedCreators[0] !== selectedCreator) {
+      setSelectedCreator(selectedCreators[0]);
+    } else if (selectedCreators.length === 0 && selectedCreator) {
+      setSelectedCreator(null);
+    }
+  }, [selectedCreators]);
 
   // Read filterIdea from URL params
   useEffect(() => {
@@ -111,8 +133,8 @@ export const Home = (): JSX.Element => {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900/40 via-gray-800/50 to-gray-900/40 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col items-center justify-center w-full min-h-screen bg-white/5 backdrop-blur-sm">
+      <div className="min-h-screen bg-gradient-to-br from-gray-500/45 via-gray-400/55 via-gray-500/50 to-gray-400/60 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col items-center justify-center w-full min-h-screen bg-white/6 backdrop-blur-md">
           <div className="w-full max-w-7xl space-y-6 p-6">
             <div className="h-12 bg-white/10 backdrop-blur-sm rounded-xl mb-6" />
             <div className="h-8 bg-white/10 backdrop-blur-sm rounded mb-4 w-1/2" />
@@ -128,9 +150,9 @@ export const Home = (): JSX.Element => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900/40 via-gray-800/50 to-gray-900/40 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-500/45 via-gray-400/55 via-gray-500/50 to-gray-400/60 relative overflow-hidden">
       {/* Main content with glassmorphism */}
-      <div className="relative z-10 min-h-screen bg-white/3 backdrop-blur-sm">
+      <div className="relative z-10 min-h-screen bg-white/6 backdrop-blur-md">
         <main className="flex flex-col items-center w-full min-h-screen">
           <div className="w-full max-w-7xl space-y-6 p-6">
             <AddAndNavigationByAnima
@@ -139,8 +161,12 @@ export const Home = (): JSX.Element => {
               onSearchChange={(value) => setSearchTerm(value)}
               selectedContentTypes={selectedContentTypes}
               onContentTypeSelect={handleContentTypeSelect}
-              selectedCreator={selectedCreator}
-              onCreatorSelect={setSelectedCreator}
+              selectedCreators={selectedCreators}
+              onCreatorsSelect={setSelectedCreators}
+              showOnlyFavorites={showOnlyFavorites}
+              onShowOnlyFavoritesChange={setShowOnlyFavorites}
+              searchMode={searchMode}
+              onSearchModeChange={setSearchMode}
             />
 
             {hasActiveFilters ? (

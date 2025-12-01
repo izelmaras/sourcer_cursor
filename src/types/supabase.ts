@@ -31,6 +31,7 @@ export interface Database {
           location_address: string | null
           flag_for_deletion: boolean | null
           prompt: string | null
+          hidden: boolean | null
         }
         Insert: {
           id?: number
@@ -53,6 +54,7 @@ export interface Database {
           location_address?: string | null
           flag_for_deletion?: boolean | null
           prompt?: string | null
+          hidden?: boolean | null
         }
         Update: {
           id?: number
@@ -75,6 +77,7 @@ export interface Database {
           location_address?: string | null
           flag_for_deletion?: boolean | null
           prompt?: string | null
+          hidden?: boolean | null
         }
       }
       categories: {

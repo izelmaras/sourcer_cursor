@@ -28,3 +28,5 @@ CREATE POLICY "Users can delete atom relationships"
 ON atom_relationships FOR DELETE
 USING (true);
 
+
+

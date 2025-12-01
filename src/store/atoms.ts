@@ -497,7 +497,13 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         }
       }
       
-      console.log('normalizedUpdates:', normalizedUpdates);
+      // Ensure hidden field is explicitly included if provided (like categories use is_private)
+      if ('hidden' in updates) {
+        // Explicitly set to boolean true or false (not null/undefined)
+        normalizedUpdates.hidden = updates.hidden === true;
+      }
+      
+      console.log('normalizedUpdates (including hidden):', normalizedUpdates);
 
       // --- MULTI-CREATOR LOGIC START ---
       if (updates.creator_name) {
@@ -563,6 +569,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         throw error;
       }
       console.log('Supabase update successful, returned data:', data);
+      console.log('Hidden value in returned data:', data?.hidden);
 
       // Use the data returned from Supabase to update local state
       // This ensures we have the exact values from the database
@@ -571,14 +578,14 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
           atom.id === id ? { ...atom, ...data } : atom
         );
         set({ atoms });
-        console.log('Successfully updated atom in store with database data');
+        console.log('Successfully updated atom in store with database data, hidden:', data.hidden);
       } else {
         // Fallback to normalizedUpdates if no data returned
         const atoms = get().atoms.map((atom: Atom) =>
           atom.id === id ? { ...atom, ...normalizedUpdates } : atom
         );
         set({ atoms });
-        console.log('Successfully updated atom in store with normalized updates');
+        console.log('Successfully updated atom in store with normalized updates, hidden:', normalizedUpdates.hidden);
       }
     } catch (error) {
       console.error('Failed to update atom:', error);
@@ -1157,5 +1164,6 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
     // For now, we'll need to fetch this separately or cache it
     // Returning 0 as placeholder - actual count should be fetched
     return 0;
-  }
+  },
+
 }));

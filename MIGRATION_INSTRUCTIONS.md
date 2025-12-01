@@ -60,3 +60,5 @@ After running the migration, verify the table exists:
 - Adds indexes for performance
 - Prevents self-references and duplicate relationships
 
+
+
