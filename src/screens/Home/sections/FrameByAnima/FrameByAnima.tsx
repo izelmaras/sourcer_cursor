@@ -547,7 +547,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             Load More ({visibleCount} of {atoms.length})
           </Button>
         ) : visibleCount >= atoms.length ? (
-          <div className="text-gray-500 text-sm">
+          <div className={`${text.primary} text-sm`}>
             Showing all {visibleCount} items
           </div>
         ) : null}
