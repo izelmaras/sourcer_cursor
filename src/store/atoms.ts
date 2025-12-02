@@ -80,6 +80,7 @@ interface AtomStore {
   creatorTags: CreatorTag[];
   selectedTags: string[];
   selectedCreators: string[];
+  selectedCreator: string | null;
   favoriteCreators: string[];
   showOnlyFavorites: boolean;
   loading: boolean;
@@ -100,6 +101,7 @@ interface AtomStore {
   fetchFavoriteCreators: () => Promise<void>;
   toggleFavoriteCreator: (creatorName: string) => Promise<void>;
   setSelectedCreators: (creators: string[]) => void;
+  setSelectedCreator: (creator: string | null) => void;
   setShowOnlyFavorites: (show: boolean) => void;
   addAtom: (atom: Omit<Database['public']['Tables']['atoms']['Insert'], 'id'>) => Promise<Atom | undefined>;
   updateAtom: (id: number, updates: Partial<Database['public']['Tables']['atoms']['Update']>) => Promise<void>;
@@ -142,6 +144,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   creatorTags: [],
   selectedTags: [],
   selectedCreators: [],
+  selectedCreator: null,
   favoriteCreators: [],
   showOnlyFavorites: false,
   loading: false,
@@ -335,7 +338,17 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   },
 
   setSelectedCreators: (creators: string[]) => {
-    set({ selectedCreators: creators });
+    set({ 
+      selectedCreators: creators,
+      selectedCreator: creators.length > 0 ? creators[0] : null
+    });
+  },
+
+  setSelectedCreator: (creator: string | null) => {
+    set({ 
+      selectedCreator: creator,
+      selectedCreators: creator ? [creator] : []
+    });
   },
 
   fetchFavoriteCreators: async () => {

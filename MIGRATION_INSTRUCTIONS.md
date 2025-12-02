@@ -62,3 +62,4 @@ After running the migration, verify the table exists:
 
 
 
+

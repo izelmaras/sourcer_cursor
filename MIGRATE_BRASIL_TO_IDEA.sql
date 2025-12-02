@@ -80,3 +80,4 @@ LEFT JOIN atom_relationships ar ON a.id = ar.parent_atom_id
 WHERE a.title = 'Going to brasil'
 GROUP BY a.id, a.title, a.content_type;
 
+
