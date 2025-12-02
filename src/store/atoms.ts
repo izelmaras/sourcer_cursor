@@ -413,7 +413,15 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   addAtom: async (atom) => {
     try {
       // Normalize tags before adding
-      const normalizedTags = atom.tags?.map(normalizeTagName);
+      let normalizedTags = atom.tags?.map(normalizeTagName) || [];
+      
+      // Auto-tag ideas with a tag based on the idea title
+      if (atom.content_type === 'idea' && atom.title) {
+        const ideaTag = normalizeTagName(atom.title);
+        if (!normalizedTags.includes(ideaTag)) {
+          normalizedTags = [...normalizedTags, ideaTag];
+        }
+      }
       
       const { data, error } = await supabase
         .from('atoms')
@@ -494,9 +502,46 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
       const normalizedUpdates = { ...updates };
       if ('tags' in updates) {
         // If tags is explicitly provided (even if null or undefined), normalize it
-        normalizedUpdates.tags = updates.tags 
+        let normalizedTags = updates.tags 
           ? updates.tags.map(normalizeTagName).filter(Boolean)
           : [];
+        
+        // Auto-tag ideas with a tag based on the idea title
+        // Check if this is an idea and if title is being updated or we need to fetch current title
+        if (updates.content_type === 'idea' || (!updates.content_type && get().atoms.find(a => a.id === id)?.content_type === 'idea')) {
+          const currentAtom = get().atoms.find(a => a.id === id);
+          const ideaTitle = updates.title || currentAtom?.title;
+          if (ideaTitle) {
+            const ideaTag = normalizeTagName(ideaTitle);
+            if (!normalizedTags.includes(ideaTag)) {
+              normalizedTags = [...normalizedTags, ideaTag];
+            }
+          }
+        }
+        
+        normalizedUpdates.tags = normalizedTags;
+      } else if ('title' in updates || 'content_type' in updates) {
+        // If title or content_type is being updated for an idea, ensure the idea tag is present
+        const currentAtom = get().atoms.find(a => a.id === id);
+        if (currentAtom?.content_type === 'idea' || updates.content_type === 'idea') {
+          const ideaTitle = updates.title || currentAtom?.title;
+          if (ideaTitle) {
+            const currentTags = currentAtom?.tags?.map(normalizeTagName) || [];
+            const ideaTag = normalizeTagName(ideaTitle);
+            if (!currentTags.includes(ideaTag)) {
+              // Fetch current tags and add idea tag
+              const { data: atomData } = await supabase
+                .from('atoms')
+                .select('tags')
+                .eq('id', id)
+                .single();
+              const existingTags = atomData?.tags?.map(normalizeTagName) || [];
+              if (!existingTags.includes(ideaTag)) {
+                normalizedUpdates.tags = [...existingTags, ideaTag];
+              }
+            }
+          }
+        }
       }
       
       // Remove prompt field if it's empty or if the column doesn't exist in the database
