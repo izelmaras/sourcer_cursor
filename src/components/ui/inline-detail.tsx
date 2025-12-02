@@ -11,7 +11,8 @@ import { CreatorInfo } from "./creator-info";
 import { supabase } from '../../lib/supabase';
 import { VideoPlayer } from "./video-player";
 import { uploadMedia } from '../../lib/storage';
-import { isVideoUrl } from '../../lib/utils';
+import { isVideoUrl, isImageUrl } from '../../lib/utils';
+import { LiveLinkPreview } from './LiveLinkPreview';
 import { backgrounds, borders, text, icons, radius, tags as tagStyles, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
 import { useNavigate } from "react-router-dom";
 
@@ -223,6 +224,24 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
       // The store is already updated by updateAtom, so the grid should automatically filter them out
     } catch (error) {
       console.error('Error toggling hide all child atoms:', error);
+    }
+  };
+
+  // Unhide a specific child atom
+  const handleUnhideChildAtom = async (childAtomId: number) => {
+    if (!atom?.id || atom.content_type !== 'idea') return;
+    
+    try {
+      // Update the atom to unhide it
+      await updateAtom(childAtomId, { hidden: false });
+      
+      // Refresh the child atoms list
+      const children = await fetchChildAtoms(atom.id);
+      setChildAtoms(children);
+      
+      // The store is already updated by updateAtom, so the grid should automatically show it
+    } catch (error) {
+      console.error('Error unhiding child atom:', error);
     }
   };
 
@@ -840,6 +859,47 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
             </div>
           )}
 
+          {/* Link Preview - for link content type */}
+          {atom.content_type === 'link' && atom.link && (
+            <div className="mb-4">
+              <a
+                href={atom.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                <div className={`relative ${backgrounds.layer1} ${radius.md} overflow-hidden ${borders.quaternary}`}>
+                  <LiveLinkPreview url={atom.link} height={400}>
+                    {/* Fallback: Use media_source_link if it's a proper image, otherwise use microlink screenshot */}
+                    {atom.media_source_link && isImageUrl(atom.media_source_link) ? (
+                      <img
+                        src={atom.media_source_link}
+                        alt={atom.title || 'Link preview'}
+                        className="w-full h-auto max-h-[400px] object-cover"
+                        onError={(e) => {
+                          // If media_source_link fails, try microlink screenshot
+                          const img = e.target as HTMLImageElement;
+                          if (atom.link) {
+                            img.src = `https://api.microlink.io/?url=${encodeURIComponent(atom.link)}&screenshot=true&embed=screenshot.url`;
+                          } else {
+                            img.style.display = 'none';
+                          }
+                        }}
+                      />
+                    ) : atom.link ? (
+                      <img
+                        src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link)}&screenshot=true&embed=screenshot.url`}
+                        alt={atom.title || 'Link preview'}
+                        className="w-full h-auto max-h-[400px] object-cover"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : null}
+                  </LiveLinkPreview>
+                </div>
+              </a>
+            </div>
+          )}
+
           {/* Description */}
           {atom.description && (
             <div className="mb-4">
@@ -923,6 +983,21 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                           {childAtom.title || 'Untitled'}
                         </div>
                       </div>
+                      
+                      {/* Eye icon for hidden atoms */}
+                      {childAtom.hidden === true && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleUnhideChildAtom(childAtom.id);
+                          }}
+                          className="absolute top-2 right-2 z-10 p-1.5 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-colors"
+                          title="Unhide this inspiration"
+                        >
+                          <EyeOffIcon className={`w-4 h-4 ${icons.primary}`} />
+                        </button>
+                      )}
                     </div>
                     );
                   })}

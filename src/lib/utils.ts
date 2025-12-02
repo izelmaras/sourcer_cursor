@@ -33,6 +33,39 @@ export function isVideoUrl(url: string): boolean {
   return videoExtensions.some(ext => urlLower.includes(`.${ext}`));
 }
 
+// Check if a URL is an image
+export function isImageUrl(url: string): boolean {
+  if (!url) return false;
+  
+  // Check for image file extensions
+  const imageExtensions = [
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico',
+    'tiff', 'tif', 'heic', 'heif', 'avif'
+  ];
+  
+  const urlLower = url.toLowerCase();
+  // Check if URL ends with image extension or contains it before query params
+  const hasImageExtension = imageExtensions.some(ext => {
+    const pattern = new RegExp(`\\.${ext}(?:[?#]|$)`, 'i');
+    return pattern.test(urlLower);
+  });
+  
+  if (hasImageExtension) return true;
+  
+  // Check for common image hosting domains
+  const imageDomains = [
+    'imgur.com', 'i.imgur.com', 'unsplash.com', 'pexels.com',
+    'pixabay.com', 'flickr.com', 'cloudinary.com', 'imgix.net'
+  ];
+  
+  try {
+    const urlObj = new URL(url);
+    return imageDomains.some(domain => urlObj.hostname.includes(domain));
+  } catch {
+    return false;
+  }
+}
+
 // Check if a video URL is likely to have CORS issues
 export function isLikelyCorsRestricted(url: string): boolean {
   if (!url) return false;

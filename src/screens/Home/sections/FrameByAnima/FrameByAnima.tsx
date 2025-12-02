@@ -8,7 +8,7 @@ import { Database } from "../../../../types/supabase";
 import { LazyImage } from "../../../../components/ui/lazy-image";
 import { HtmlContent } from "../../../../components/ui/html-content";
 import { VideoPlayer } from "../../../../components/ui/video-player";
-import { getYouTubeVideoId, isVideoUrl } from "../../../../lib/utils";
+import { getYouTubeVideoId, isVideoUrl, isImageUrl } from "../../../../lib/utils";
 import { LiveLinkPreview } from "../../../../components/ui/LiveLinkPreview";
 import Masonry from 'react-masonry-css';
 import { VideoThumbnail } from "../../../../components/ui/video-thumbnail";
@@ -453,18 +453,29 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
               <GalleryTileContent className={`relative px-4 pb-6 pt-4 sm:px-5 sm:pb-8 sm:pt-5 flex flex-col min-h-[120px] text-white`}>
                 {atom.content_type === 'link' && atom.link && (
                   <div className="mb-2 flex justify-center">
-                    <LiveLinkPreview url={atom.link || ""} height={240}>
-                      {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
-                        <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
-                      ) : atom.link ? (
-                        <img
-                          src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
-                          alt={atom.title}
-                          className="w-full h-40 object-cover rounded"
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      ) : null}
-                    </LiveLinkPreview>
+                    {atom.media_source_link && isImageUrl(atom.media_source_link) ? (
+                      // Use media_source_link if it's a proper image
+                      <img
+                        src={atom.media_source_link}
+                        alt={atom.title}
+                        className="w-full h-40 object-cover rounded"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      // Otherwise use link preview
+                      <LiveLinkPreview url={atom.link || ""} height={240}>
+                        {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
+                          <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
+                        ) : atom.link ? (
+                          <img
+                            src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
+                            alt={atom.title}
+                            className="w-full h-40 object-cover rounded"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : null}
+                      </LiveLinkPreview>
+                    )}
                   </div>
                 )}
                 {isIdea && (

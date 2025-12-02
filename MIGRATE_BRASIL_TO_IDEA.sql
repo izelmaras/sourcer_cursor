@@ -81,3 +81,4 @@ WHERE a.title = 'Going to brasil'
 GROUP BY a.id, a.title, a.content_type;
 
 
+
