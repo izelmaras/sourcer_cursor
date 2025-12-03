@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Izel's Sources - Save Image</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Izel's Sources</h2>
+    </div>
+    
+    <div class="content">
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+      </div>
+      
+      <div id="form" class="form hidden">
+        <div class="image-preview">
+          <img id="previewImage" src="" alt="Preview" />
+        </div>
+        
+        <div class="form-group">
+          <label for="title">Title</label>
+          <input type="text" id="title" placeholder="Enter title..." />
+        </div>
+        
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" placeholder="Enter description..." rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Source Link</label>
+          <div class="source-info">
+            <span id="imageUrl" class="source-url"></span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>External Link</label>
+          <div class="source-info">
+            <span id="sourceUrl" class="source-url"></span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="tags">Tags</label>
+          <div class="dropdown-container">
+            <div class="selected-items" id="selectedTags"></div>
+            <input type="text" id="tagSearch" placeholder="Search or add tags..." autocomplete="off" />
+            <div class="dropdown" id="tagDropdown"></div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="creators">Creators</label>
+          <div class="dropdown-container">
+            <div class="selected-items" id="selectedCreators"></div>
+            <input type="text" id="creatorSearch" placeholder="Search or add creators..." autocomplete="off" />
+            <div class="dropdown" id="creatorDropdown"></div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="ideas">Ideas</label>
+          <div class="dropdown-container">
+            <div class="selected-items" id="selectedIdeas"></div>
+            <input type="text" id="ideaSearch" placeholder="Search ideas..." autocomplete="off" />
+            <div class="dropdown" id="ideaDropdown"></div>
+          </div>
+        </div>
+        
+        <div class="button-group">
+          <button id="cancelButton" class="btn btn-secondary">Cancel</button>
+          <span class="button-separator">—</span>
+          <button id="saveButton" class="btn btn-primary">Save</button>
+        </div>
+        
+        <div id="status" class="status hidden"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
+
