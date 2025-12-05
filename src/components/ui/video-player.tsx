@@ -30,8 +30,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   
   // Normalize the source URL (handle protocol-relative URLs)
-  const normalizedSrc = normalizeUrl(src);
-  const urlIsValid = isValidUrl(normalizedSrc);
+  const normalizedSrc = src ? normalizeUrl(src) : '';
+  const urlIsValid = src ? isValidUrl(normalizedSrc) : false;
   const youtubeEmbedUrl = urlIsValid ? getYouTubeEmbedUrl(normalizedSrc) : null;
   const isYouTube = Boolean(youtubeEmbedUrl);
   const isVideoFile = urlIsValid && isVideoUrl(normalizedSrc) && !isYouTube;

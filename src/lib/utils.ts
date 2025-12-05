@@ -18,65 +18,98 @@ export function getYouTubeEmbedUrl(url: string): string | null {
 
 // Check if a string is a valid URL format (synchronous check)
 export function isValidUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') return false;
-  
-  // Check if it's already a valid absolute URL
   try {
-    const urlObj = new URL(url);
-    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
-  } catch {
-    // Not a valid absolute URL
-  }
-  
-  // Protocol-relative URLs (//example.com)
-  if (url.startsWith('//')) {
-    const withoutProtocol = url.slice(2);
-    // Must have a domain (contains a dot and at least one slash or is just a domain)
-    return withoutProtocol.includes('.') && (withoutProtocol.includes('/') || !withoutProtocol.includes(' '));
-  }
-  
-  // If it's just a filename without path (e.g., "grok.mp4"), it's not a valid URL
-  if (!url.includes('/') && !url.startsWith('data:') && !url.startsWith('blob:')) {
-    // Check if it's just a filename pattern (word.extension)
-    const filenamePattern = /^[^/\\]+\.\w+$/;
-    if (filenamePattern.test(url)) {
-      return false; // Just a filename, not a valid URL
+    if (!url || typeof url !== 'string') return false;
+    
+    // Reject file:// protocol URLs - they're not safe for web use
+    if (url.toLowerCase().startsWith('file://')) {
+      return false;
     }
+    
+    // Check if it's already a valid absolute URL
+    try {
+      const urlObj = new URL(url);
+      // Only accept http and https protocols
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      // Not a valid absolute URL
+    }
+    
+    // Protocol-relative URLs (//example.com)
+    if (url.startsWith('//')) {
+      const withoutProtocol = url.slice(2);
+      // Must have a domain (contains a dot and at least one slash or is just a domain)
+      return withoutProtocol.includes('.') && (withoutProtocol.includes('/') || !withoutProtocol.includes(' '));
+    }
+    
+    // If it's just a filename without path (e.g., "grok.mp4"), it's not a valid URL
+    if (!url.includes('/') && !url.startsWith('data:') && !url.startsWith('blob:')) {
+      // Check if it's just a filename pattern (word.extension)
+      const filenamePattern = /^[^/\\]+\.\w+$/;
+      if (filenamePattern.test(url)) {
+        return false; // Just a filename, not a valid URL
+      }
+    }
+    
+    // If it has a slash, it might be a path or URL
+    return true;
+  } catch (error) {
+    // If anything goes wrong, assume invalid to prevent crashes
+    console.warn('Error validating URL:', url, error);
+    return false;
   }
-  
-  // If it has a slash, it might be a path or URL
-  return true;
 }
 
 // Normalize protocol-relative URLs (add https: if missing)
 export function normalizeUrl(url: string): string {
-  if (!url) return url;
-  
-  // If it's already a valid absolute URL, return as-is
   try {
-    const urlObj = new URL(url);
-    if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-      return url;
+    if (!url || typeof url !== 'string') return url || '';
+    
+    // Reject file:// protocol URLs - they're not safe for web use
+    if (url.toLowerCase().startsWith('file://')) {
+      // Try to extract the path and convert to https if it looks like a web URL
+      const pathMatch = url.match(/file:\/\/\/(.+)/);
+      if (pathMatch && pathMatch[1]) {
+        const path = pathMatch[1];
+        // If it looks like it has a domain, try to convert to https
+        if (path.includes('.') && path.includes('/')) {
+          return `https://${path}`;
+        }
+      }
+      // Otherwise return empty string to indicate invalid URL
+      return '';
     }
-  } catch {
-    // Not a valid absolute URL, continue with normalization
-  }
-  
-  // If it starts with //, add https:
-  if (url.startsWith('//')) {
-    return `https:${url}`;
-  }
-  
-  // If it doesn't have a protocol, add https://
-  // But only if it looks like it could be a valid URL (not just a filename)
-  if (!url.match(/^https?:\/\//i) && !url.startsWith('data:') && !url.startsWith('blob:')) {
-    // Don't normalize bare filenames - they'll be caught by error handling
-    if (url.includes('/') || !/^[^/\\]+\.\w+$/.test(url)) {
-      return `https://${url}`;
+    
+    // If it's already a valid absolute URL, return as-is
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+        return url;
+      }
+    } catch {
+      // Not a valid absolute URL, continue with normalization
     }
+    
+    // If it starts with //, add https:
+    if (url.startsWith('//')) {
+      return `https:${url}`;
+    }
+    
+    // If it doesn't have a protocol, add https://
+    // But only if it looks like it could be a valid URL (not just a filename)
+    if (!url.match(/^https?:\/\//i) && !url.startsWith('data:') && !url.startsWith('blob:')) {
+      // Don't normalize bare filenames - they'll be caught by error handling
+      if (url.includes('/') || !/^[^/\\]+\.\w+$/.test(url)) {
+        return `https://${url}`;
+      }
+    }
+    
+    return url;
+  } catch (error) {
+    // If anything goes wrong, return the original URL to prevent crashes
+    console.warn('Error normalizing URL:', url, error);
+    return url || '';
   }
-  
-  return url;
 }
 
 // Enhanced video URL detection
