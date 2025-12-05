@@ -102,10 +102,9 @@ export function isLikelyCorsRestricted(url: string): boolean {
       'static.',
       'media.',
       'assets.',
-      'ctfassets.net',  // Contentful CDN
-      'contentful.com', // Contentful domain
       'layers-uploads-prod.s3.eu-west-2.amazonaws.com',
       'www.mercuryos.com'
+      // Note: Contentful CDN (ctfassets.net) removed - videos actually work fine
     ];
     
     return problematicDomains.some(domain => 

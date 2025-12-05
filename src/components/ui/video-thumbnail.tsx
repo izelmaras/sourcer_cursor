@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { normalizeUrl } from '../../lib/utils';
 
 interface VideoThumbnailProps {
@@ -8,6 +8,7 @@ interface VideoThumbnailProps {
   className?: string;
   onThumbnail?: (dataUrl: string) => void;
   fallbackIcon?: React.ReactNode;
+  onVideoDimensions?: (width: number, height: number) => void;
 }
 
 export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
@@ -16,9 +17,14 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
   className = '',
   onThumbnail,
   fallbackIcon,
+  onVideoDimensions,
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
+  const [tryWithoutCors, setTryWithoutCors] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Normalize the source URL (handle protocol-relative URLs)
   const normalizedSrc = src ? normalizeUrl(src) : '';
@@ -46,30 +52,97 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
     );
   }
 
+  // Reset error state when src changes
+  useEffect(() => {
+    setHasError(false);
+    setIsLoading(true);
+    setVideoAspectRatio(null);
+    setTryWithoutCors(false);
+  }, [normalizedSrc]);
+
+  // Set up timeout for loading
+  useEffect(() => {
+    if (!normalizedSrc || hasError) return;
+    
+    const timeoutId = setTimeout(() => {
+      if (isLoading && !tryWithoutCors) {
+        // If still loading and haven't tried without CORS, try that
+        setTryWithoutCors(true);
+        if (videoRef.current) {
+          videoRef.current.removeAttribute('crossorigin');
+          videoRef.current.load();
+        }
+      } else if (isLoading) {
+        // If still loading after trying both methods, show error
+        setIsLoading(false);
+        setHasError(true);
+      }
+    }, 5000); // 5 second timeout
+
+    return () => clearTimeout(timeoutId);
+  }, [normalizedSrc, isLoading, hasError, tryWithoutCors]);
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative w-full flex items-center justify-center">
       {isLoading && (
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
         </div>
       )}
       <video
+        ref={videoRef}
         src={normalizedSrc}
-        className={`object-cover ${className}`}
+        className={`w-full h-auto max-h-[400px] object-contain transition-transform duration-300 ${className}`}
         muted
         loop
         autoPlay
         playsInline
         preload="metadata"
-        crossOrigin="anonymous"
-        onLoadedMetadata={() => {
+        crossOrigin={tryWithoutCors ? undefined : "anonymous"}
+        onLoadedMetadata={(e) => {
           setIsLoading(false);
+          setHasError(false);
+          const video = e.currentTarget;
+          // Store aspect ratio for horizontal videos
+          const aspectRatio = video.videoWidth / video.videoHeight;
+          setVideoAspectRatio(aspectRatio);
+          
+          // Calculate and notify parent of video dimensions for horizontal videos
+          if (onVideoDimensions && aspectRatio > 1 && containerRef.current) {
+            // Use a small delay to ensure container width is available
+            setTimeout(() => {
+              if (containerRef.current && video.videoWidth && video.videoHeight) {
+                const containerWidth = containerRef.current.offsetWidth || containerRef.current.clientWidth;
+                if (containerWidth > 0) {
+                  const calculatedHeight = containerWidth / aspectRatio;
+                  // Only set if height is reasonable (not too tall)
+                  if (calculatedHeight <= 400 && calculatedHeight >= 100) {
+                    onVideoDimensions(containerWidth, calculatedHeight);
+                  }
+                }
+              }
+            }, 100);
+          }
+          
           // Call onThumbnail with the video src as a simple identifier
           onThumbnail?.(normalizedSrc);
         }}
-        onError={() => {
+        onError={(e) => {
+          const video = e.currentTarget;
+          // If error and haven't tried without CORS, try that
+          if (!tryWithoutCors && video.crossOrigin === 'anonymous') {
+            setTryWithoutCors(true);
+            video.removeAttribute('crossorigin');
+            video.load();
+          } else {
+            // Already tried without CORS or other error
+            setIsLoading(false);
+            setHasError(true);
+          }
+        }}
+        onCanPlay={() => {
+          // Video can play, hide loading
           setIsLoading(false);
-          setHasError(true);
         }}
       />
     </div>

@@ -181,7 +181,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }
 
   // For problematic domains or timeout fallback, show a clickable interface instead of trying to embed
-  if ((isProblematicDomain || shouldOpenInNewTab) && isVideoFile) {
+  // Only show fallback if we have an actual error or timeout, not just because domain is flagged
+  // This allows videos that actually work (like Contentful CDN) to play
+  if ((shouldOpenInNewTab || hasError) && isVideoFile) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer ${className}`} 
            onClick={() => window.open(normalizedSrc, '_blank')}>
@@ -199,6 +201,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <div className="mb-2 p-2 bg-gray-200 rounded text-xs">
               <p>Debug: {normalizedSrc}</p>
               <p>Problematic: {isProblematicDomain ? 'Yes' : 'No'}</p>
+              <p>Has Error: {hasError ? 'Yes' : 'No'}</p>
+              <p>Should Open New Tab: {shouldOpenInNewTab ? 'Yes' : 'No'}</p>
             </div>
           )}
           <div className="inline-flex items-center gap-1 text-blue-600 text-xs">
