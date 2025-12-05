@@ -467,8 +467,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           media_source_link: imageUrl,
           link: sourceUrl || null,
           content_type: 'image',
-          tags: selectedTags,
-          creator_name: selectedCreators.join(', ') || null,
+          tags: selectedTags.length > 0 ? selectedTags : [],
+          creator_name: selectedCreators.length > 0 ? selectedCreators.join(', ') : null,
           store_in_database: true
         };
 
@@ -490,6 +490,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
               const errorData = await responseClone.json();
               errorText = errorData.error || errorData.message || '';
+              if (errorData.details) {
+                errorText += ` (${errorData.details})`;
+              }
+              if (errorData.hint) {
+                errorText += ` - ${errorData.hint}`;
+              }
             } catch {
               errorText = `HTTP ${response.status}`;
             }
@@ -539,7 +545,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       } catch (error) {
         console.error('Error saving:', error);
-        showStatus(`Error: ${error.message}`, 'error');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        showStatus(`Error: ${errorMessage}`, 'error');
         if (saveButton) {
           saveButton.disabled = false;
           saveButton.textContent = 'Save';

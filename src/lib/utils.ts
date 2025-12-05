@@ -16,12 +16,32 @@ export function getYouTubeEmbedUrl(url: string): string | null {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
 }
 
+// Normalize protocol-relative URLs (add https: if missing)
+export function normalizeUrl(url: string): string {
+  if (!url) return url;
+  
+  // If it starts with //, add https:
+  if (url.startsWith('//')) {
+    return `https:${url}`;
+  }
+  
+  // If it doesn't have a protocol, add https://
+  if (!url.match(/^https?:\/\//i)) {
+    return `https://${url}`;
+  }
+  
+  return url;
+}
+
 // Enhanced video URL detection
 export function isVideoUrl(url: string): boolean {
   if (!url) return false;
   
+  // Normalize protocol-relative URLs first
+  const normalizedUrl = normalizeUrl(url);
+  
   // Check for YouTube URLs
-  if (getYouTubeVideoId(url)) return true;
+  if (getYouTubeVideoId(normalizedUrl)) return true;
   
   // Check for video file extensions
   const videoExtensions = [
@@ -29,7 +49,7 @@ export function isVideoUrl(url: string): boolean {
     '3gp', 'flv', 'wmv', 'asf', 'f4v', 'f4p', 'f4a', 'f4b'
   ];
   
-  const urlLower = url.toLowerCase();
+  const urlLower = normalizedUrl.toLowerCase();
   return videoExtensions.some(ext => urlLower.includes(`.${ext}`));
 }
 
@@ -71,7 +91,9 @@ export function isLikelyCorsRestricted(url: string): boolean {
   if (!url) return false;
   
   try {
-    const urlObj = new URL(url);
+    // Normalize URL first to handle protocol-relative URLs
+    const normalizedUrl = normalizeUrl(url);
+    const urlObj = new URL(normalizedUrl);
     const problematicDomains = [
       's3.amazonaws.com',
       's3.eu-west-2.amazonaws.com',
@@ -80,6 +102,8 @@ export function isLikelyCorsRestricted(url: string): boolean {
       'static.',
       'media.',
       'assets.',
+      'ctfassets.net',  // Contentful CDN
+      'contentful.com', // Contentful domain
       'layers-uploads-prod.s3.eu-west-2.amazonaws.com',
       'www.mercuryos.com'
     ];

@@ -77,16 +77,32 @@ export default async function handler(
         media_source_link,
         link: link || null,
         content_type,
-        tags: finalTags,
+        tags: finalTags.length > 0 ? finalTags : null,
         creator_name: creator_name || null,
         store_in_database: true,
+        is_external: Boolean(link),
       }])
       .select()
       .single();
 
     if (atomError) {
       console.error('Error adding atom:', atomError);
-      return response.status(500).json({ error: atomError.message });
+      console.error('Atom data attempted:', {
+        title: title || 'Untitled',
+        description: description || null,
+        media_source_link,
+        link: link || null,
+        content_type,
+        tags: finalTags,
+        creator_name: creator_name || null,
+        store_in_database: true,
+        is_external: Boolean(link),
+      });
+      return response.status(500).json({ 
+        error: atomError.message,
+        details: atomError.details,
+        hint: atomError.hint
+      });
     }
 
     // Handle creators if provided

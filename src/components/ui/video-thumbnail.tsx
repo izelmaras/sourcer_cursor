@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { normalizeUrl } from '../../lib/utils';
 
 interface VideoThumbnailProps {
   src: string;
@@ -18,6 +19,9 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Normalize the source URL (handle protocol-relative URLs)
+  const normalizedSrc = src ? normalizeUrl(src) : '';
 
   if (!src) {
     return (
@@ -50,7 +54,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
         </div>
       )}
       <video
-        src={src}
+        src={normalizedSrc}
         className={`object-cover ${className}`}
         muted
         loop
@@ -61,7 +65,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
         onLoadedMetadata={() => {
           setIsLoading(false);
           // Call onThumbnail with the video src as a simple identifier
-          onThumbnail?.(src);
+          onThumbnail?.(normalizedSrc);
         }}
         onError={() => {
           setIsLoading(false);

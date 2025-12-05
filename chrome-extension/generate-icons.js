@@ -131,3 +131,5 @@ console.log('Created generate-icons.html');
 console.log('Open this file in a browser and click "Download Icons" to generate the icon files.');
 console.log('Then place icon16.png, icon48.png, and icon128.png in the icons/ folder.');
 
+
+

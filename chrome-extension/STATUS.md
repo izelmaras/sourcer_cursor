@@ -57,3 +57,5 @@ The Chrome extension is currently **not functional** because the API routes need
 4. Select the `chrome-extension` folder
 5. Extension is ready to use!
 
+
+

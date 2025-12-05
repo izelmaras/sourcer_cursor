@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { getYouTubeEmbedUrl, getYouTubeVideoId, isVideoUrl, isLikelyCorsRestricted } from '../../lib/utils';
+import { getYouTubeEmbedUrl, getYouTubeVideoId, isVideoUrl, isLikelyCorsRestricted, normalizeUrl } from '../../lib/utils';
 
 interface VideoPlayerProps {
   src: string;
@@ -29,10 +29,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  const youtubeEmbedUrl = getYouTubeEmbedUrl(src);
+  // Normalize the source URL (handle protocol-relative URLs)
+  const normalizedSrc = normalizeUrl(src);
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(normalizedSrc);
   const isYouTube = Boolean(youtubeEmbedUrl);
-  const isVideoFile = isVideoUrl(src) && !isYouTube;
-  const isProblematicDomain = isLikelyCorsRestricted(src);
+  const isVideoFile = isVideoUrl(normalizedSrc) && !isYouTube;
+  const isProblematicDomain = isLikelyCorsRestricted(normalizedSrc);
 
   useEffect(() => {
     setIsLoading(true);
@@ -51,7 +53,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     //     youtubeEmbedUrl
     //   });
     // }
-  }, [src, debug, isYouTube, isVideoFile, isProblematicDomain, youtubeEmbedUrl]);
+  }, [normalizedSrc, debug, isYouTube, isVideoFile, isProblematicDomain, youtubeEmbedUrl]);
 
   // Set up timeout for video loading - this must come before any early returns
   useEffect(() => {
@@ -64,7 +66,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       return () => clearTimeout(timeoutId);
     }
-  }, [src, isLoading, isVideoFile, isYouTube]);
+  }, [normalizedSrc, isLoading, isVideoFile, isYouTube]);
 
   const handleLoadStart = () => {
     setIsLoading(true);
@@ -100,14 +102,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
     }
     
-    console.warn('Video player error for:', src, message);
+    console.warn('Video player error for:', normalizedSrc, message);
     setIsLoading(false);
     setHasError(true);
     setErrorMessage(message);
   };
 
   const handleTimeout = () => {
-    console.warn('Video loading timeout for:', src);
+    console.warn('Video loading timeout for:', normalizedSrc);
     setIsLoading(false);
     setShouldOpenInNewTab(true);
     setErrorMessage('Video loading timed out');
@@ -156,7 +158,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  if (!isVideoUrl(src)) {
+  if (!isVideoUrl(normalizedSrc)) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 text-gray-500 ${className}`}>
         <div className="text-center p-4">
@@ -164,11 +166,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <p className="text-xs text-gray-400 mt-1">Supported: MP4, MOV, WebM, OGG, AVI, MKV, M4V, 3GP, FLV, WMV</p>
           {debug && (
             <div className="mt-2 p-2 bg-gray-200 rounded text-xs">
-              <p>Debug: {src}</p>
+              <p>Debug: {normalizedSrc}</p>
             </div>
           )}
           <button 
-            onClick={() => window.open(src, '_blank')}
+            onClick={() => window.open(normalizedSrc, '_blank')}
             className="text-xs text-blue-600 hover:text-blue-800 underline mt-2"
           >
             Try opening in new tab
@@ -182,7 +184,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   if ((isProblematicDomain || shouldOpenInNewTab) && isVideoFile) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer ${className}`} 
-           onClick={() => window.open(src, '_blank')}>
+           onClick={() => window.open(normalizedSrc, '_blank')}>
         <div className="text-center p-4">
           <div className="mb-3">
             <svg className="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,7 +197,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </p>
           {debug && (
             <div className="mb-2 p-2 bg-gray-200 rounded text-xs">
-              <p>Debug: {src}</p>
+              <p>Debug: {normalizedSrc}</p>
               <p>Problematic: {isProblematicDomain ? 'Yes' : 'No'}</p>
             </div>
           )}
@@ -223,12 +225,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <p className="text-xs text-gray-400 mb-3">{errorMessage || 'This video cannot be played due to access restrictions'}</p>
           {debug && (
             <div className="mb-2 p-2 bg-gray-200 rounded text-xs">
-              <p>Debug: {src}</p>
+              <p>Debug: {normalizedSrc}</p>
               <p>Error: {errorMessage}</p>
             </div>
           )}
           <button 
-            onClick={() => window.open(src, '_blank')}
+            onClick={() => window.open(normalizedSrc, '_blank')}
             className="text-xs text-blue-600 hover:text-blue-800 underline"
           >
             Open in new tab
@@ -250,7 +252,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
       <video
         ref={videoRef}
-        src={src}
+        src={normalizedSrc}
         className={className}
         controls={controls}
         autoPlay={autoPlay}
