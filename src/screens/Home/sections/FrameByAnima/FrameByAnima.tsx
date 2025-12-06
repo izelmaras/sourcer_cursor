@@ -238,10 +238,11 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
         setExpandedAtomId(newAtom.id);
       }
     } else {
-      // Normal navigation through all atoms
+      // Normal navigation through all atoms - wrap around continuously
       const currentIndex = atoms.findIndex(atom => atom.id === expandedAtomId);
       if (currentIndex === -1) return;
       
+      // Use modulo to wrap around continuously
       const newIndex = direction === 'prev' 
         ? (currentIndex - 1 + atoms.length) % atoms.length
         : (currentIndex + 1) % atoms.length;

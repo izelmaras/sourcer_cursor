@@ -263,27 +263,30 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Prevent default behavior for arrow keys to avoid scrolling
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (e.key === 'ArrowLeft' && hasPrevious) {
       // Simulate clicking the previous button
       const prevButton = document.querySelector('[data-navigate="prev"]') as HTMLButtonElement;
-      console.log('Arrow left pressed, prev button:', prevButton);
-      if (prevButton) {
+      if (prevButton && !prevButton.disabled) {
         prevButton.click();
       } else {
-        console.log('Prev button not found, calling onNavigate directly');
         onNavigate('prev');
       }
     } else if (e.key === 'ArrowRight' && hasNext) {
       // Simulate clicking the next button
       const nextButton = document.querySelector('[data-navigate="next"]') as HTMLButtonElement;
-      console.log('Arrow right pressed, next button:', nextButton);
-      if (nextButton) {
+      if (nextButton && !nextButton.disabled) {
         nextButton.click();
       } else {
-        console.log('Next button not found, calling onNavigate directly');
         onNavigate('next');
       }
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       onClose();
     }
   }, [hasPrevious, hasNext, onClose, onNavigate]);
