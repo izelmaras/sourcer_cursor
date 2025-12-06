@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon, FilterIcon, LightbulbIcon, MinusIcon, PlusIcon, LayersIcon } from "lucide-react";
+import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon, FilterIcon, LightbulbIcon, MinusIcon, PlusIcon, LayersIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { Database } from '../../types/supabase';
 import { useAtomStore } from "../../store/atoms";
 import { IconButton } from "./icon-button";
@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase';
 import { VideoPlayer } from "./video-player";
 import { uploadMedia } from '../../lib/storage';
 import { isVideoUrl, getProxiedImageUrl } from '../../lib/utils';
+import { LiveLinkPreview } from './LiveLinkPreview';
 import { backgrounds, borders, text, icons, radius, tags as tagStyles, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
 import { useNavigate } from "react-router-dom";
 
@@ -80,6 +81,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   const [isLoadingChildCount, setIsLoadingChildCount] = useState(false);
   const [childAtoms, setChildAtoms] = useState<Atom[]>([]);
   const [isLoadingChildAtoms, setIsLoadingChildAtoms] = useState(false);
+  const [visibleTagCount, setVisibleTagCount] = useState(20); // For lazy loading tags
 
   useEffect(() => {
     fetchTags();
@@ -186,6 +188,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         try {
           const children = await fetchChildAtoms(atom.id);
           setChildAtoms(children);
+          setVisibleTagCount(20); // Reset lazy loading when atom changes
         } catch (error) {
           console.error('Error fetching child atoms list:', error);
           setChildAtoms([]);
@@ -194,12 +197,70 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         }
       } else {
         setChildAtoms([]);
+        setVisibleTagCount(20); // Reset lazy loading
       }
     };
     if (atom?.id) {
       fetchChildren();
     }
   }, [atom?.id, atom?.content_type, fetchChildAtoms]);
+
+  // Check if all child atoms are hidden (treat null as false)
+  const allChildAtomsHidden = childAtoms.length > 0 && childAtoms.every(a => a.hidden === true);
+  // Check if any child atom is hidden (treat null as false)
+  const anyChildAtomHidden = childAtoms.length > 0 && childAtoms.some(a => a.hidden === true);
+
+  // Hide/show all child atoms of an idea
+  const handleToggleHideAllChildAtoms = async () => {
+    if (!atom?.id || atom.content_type !== 'idea' || childAtoms.length === 0) return;
+    
+    try {
+      // If any are hidden, unhide all; otherwise hide all
+      const hideValue = !anyChildAtomHidden;
+      const childAtomIds = childAtoms.map(c => c.id);
+      
+      // Update all child atoms in the database - updateAtom already updates the store
+      await Promise.all(
+        childAtomIds.map(id => updateAtom(id, { hidden: hideValue }))
+      );
+      
+      // Update local childAtoms state immediately
+      setChildAtoms(prev => prev.map(a => ({ ...a, hidden: hideValue })));
+      
+      // The store is already updated by updateAtom, so the grid should automatically filter them out
+    } catch (error) {
+      console.error('Error toggling hide all child atoms:', error);
+    }
+  };
+
+  // Toggle hide/unhide for a specific child atom
+  const handleToggleHideChildAtom = async (childAtomId: number) => {
+    if (!atom?.id || atom.content_type === 'idea') return;
+    
+    try {
+      // Find the current hidden state of this atom
+      const childAtom = childAtoms.find(a => a.id === childAtomId);
+      const currentHidden = childAtom?.hidden === true;
+      
+      // Toggle the hidden state
+      await updateAtom(childAtomId, { hidden: !currentHidden });
+      
+      // Update local state immediately for better UX
+      setChildAtoms(prev => prev.map(a => 
+        a.id === childAtomId 
+          ? { ...a, hidden: !currentHidden }
+          : a
+      ));
+      
+      // Refresh the child atoms list to ensure consistency
+      const children = await fetchChildAtoms(atom.id);
+      setChildAtoms(children);
+      
+      // The store is already updated by updateAtom, so the grid should automatically update
+    } catch (error) {
+      console.error('Error toggling hide child atom:', error);
+    }
+  };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft' && hasPrevious) {
@@ -427,7 +488,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
   if (!atom) return null;
 
-  const hasMedia = atom.media_source_link && (atom.content_type === 'image' || atom.content_type === 'video');
+  const hasMedia = atom.media_source_link && (atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie');
   const isVideo = hasMedia && isVideoUrl(atom.media_source_link || '');
 
   const filteredTags = tags
@@ -495,6 +556,27 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                   <span className={`text-xs ${text.primary}`}>{childAtomCount}</span>
                 )}
               </div>
+            </IconButton>
+          )}
+
+          {/* Hide/Show all inspirations for ideas */}
+          {atom?.content_type === 'idea' && (
+            <IconButton 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Eye icon clicked!', { childAtomsLength: childAtoms.length });
+                handleToggleHideAllChildAtoms();
+              }}
+              size="sm"
+              title={anyChildAtomHidden ? "Show all inspirations in grid" : "Hide all inspirations from grid"}
+              disabled={childAtoms.length === 0}
+            >
+              {anyChildAtomHidden ? (
+                <EyeOffIcon className={`w-4 h-4 ${icons.primary}`} />
+              ) : (
+                <EyeIcon className={`w-4 h-4 ${icons.primary}`} />
+              )}
             </IconButton>
           )}
           
@@ -770,11 +852,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           )}
           
           {hasMedia && (
-            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} min-h-[200px]`}>
+            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} max-h-[60vh] w-full`}>
               {isVideo ? (
                 <VideoPlayer
                   src={atom.media_source_link || ''}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full max-h-[60vh] object-contain"
                   controls={true}
                   autoPlay={false}
                   muted={false}
@@ -783,7 +865,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 <img
                   src={atom.media_source_link ? getProxiedImageUrl(atom.media_source_link) : '/placeholder-image.png'}
                   alt={atom.title || 'Media'}
-                  className="w-full h-full object-contain"
+                  className="w-full h-auto max-h-[60vh] object-contain"
                   onLoad={(e) => {
                     const img = e.target as HTMLImageElement;
                     const container = img.parentElement;
