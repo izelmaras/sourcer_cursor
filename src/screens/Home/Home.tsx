@@ -167,6 +167,8 @@ export const Home = (): JSX.Element => {
               onShowOnlyFavoritesChange={setShowOnlyFavorites}
               searchMode={searchMode}
               onSearchModeChange={setSearchMode}
+              selectedIdea={selectedIdea}
+              onIdeaFilterChange={setSelectedIdea}
             />
 
             {hasActiveFilters ? (
