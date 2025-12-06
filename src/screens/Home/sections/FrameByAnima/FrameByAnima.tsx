@@ -127,6 +127,38 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     };
   }, [loadMore, hasMore, isLoadingMore]);
 
+  // Sync idea context with selectedIdea filter
+  useEffect(() => {
+    if (selectedIdea && selectedIdea !== currentParentIdeaId) {
+      // If filtering by an idea, set up the context
+      setCurrentParentIdeaId(selectedIdea);
+      setIsLoadingChildAtoms(true);
+      fetchChildAtoms(selectedIdea)
+        .then(children => {
+          setCurrentIdeaChildAtoms(children);
+        })
+        .catch(error => {
+          console.error('Error fetching child atoms:', error);
+          setCurrentIdeaChildAtoms([]);
+        })
+        .finally(() => {
+          setIsLoadingChildAtoms(false);
+        });
+    } else if (!selectedIdea && currentParentIdeaId) {
+      // If filter is cleared, clear context (unless we're viewing an idea detail)
+      if (expandedAtomId) {
+        const expandedAtom = atoms.find(atom => atom.id === expandedAtomId);
+        if (expandedAtom?.content_type !== 'idea' || expandedAtom.id !== currentParentIdeaId) {
+          setCurrentParentIdeaId(null);
+          setCurrentIdeaChildAtoms([]);
+        }
+      } else {
+        setCurrentParentIdeaId(null);
+        setCurrentIdeaChildAtoms([]);
+      }
+    }
+  }, [selectedIdea, fetchChildAtoms, currentParentIdeaId, expandedAtomId, atoms]);
+
   // Only reset visibleCount when filters/search change
   useEffect(() => {
     const filterSignature = getFilterSignature();
@@ -187,22 +219,61 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
           setIsLoadingChildAtoms(false);
         }
       } else {
-        // Check if this atom is a child of an idea we're viewing
-        // If so, keep the parent idea context
+        // Check if this atom is a child of an idea we're viewing (either from current context or selectedIdea filter)
         const isChildOfCurrentIdea = currentIdeaChildAtoms.some(child => child.id === atom.id);
-        if (!isChildOfCurrentIdea) {
+        const isChildOfFilteredIdea = selectedIdea && selectedIdea !== atom.id; // If filtering by an idea, check if this is a child
+        
+        // If we're filtering by an idea and this atom is not that idea, fetch children to check
+        if (isChildOfFilteredIdea && !isChildOfCurrentIdea) {
+          try {
+            const children = await fetchChildAtoms(selectedIdea);
+            const isChild = children.some(child => child.id === atom.id);
+            if (isChild) {
+              // This is a child of the filtered idea, maintain context
+              setCurrentParentIdeaId(selectedIdea);
+              setCurrentIdeaChildAtoms(children);
+            } else {
+              // Not a child, clear context
+              setCurrentParentIdeaId(null);
+              setCurrentIdeaChildAtoms([]);
+            }
+          } catch (error) {
+            console.error('Error fetching child atoms:', error);
+            setCurrentParentIdeaId(null);
+            setCurrentIdeaChildAtoms([]);
+          }
+        } else if (!isChildOfCurrentIdea) {
+          // Not a child of current idea context, clear it
           setCurrentParentIdeaId(null);
           setCurrentIdeaChildAtoms([]);
         }
+        // If isChildOfCurrentIdea is true, we keep the existing context
       }
     }
     onSelect(atom);
   };
 
-  const handleCloseExpanded = () => {
+  const handleCloseExpanded = async () => {
     setExpandedAtomId(null);
-    setCurrentIdeaChildAtoms([]);
-    setCurrentParentIdeaId(null);
+    
+    // If we're filtering by an idea, restore the idea context
+    if (selectedIdea) {
+      setCurrentParentIdeaId(selectedIdea);
+      setIsLoadingChildAtoms(true);
+      try {
+        const children = await fetchChildAtoms(selectedIdea);
+        setCurrentIdeaChildAtoms(children);
+      } catch (error) {
+        console.error('Error fetching child atoms:', error);
+        setCurrentIdeaChildAtoms([]);
+      } finally {
+        setIsLoadingChildAtoms(false);
+      }
+    } else {
+      // Not filtering by idea, clear context
+      setCurrentIdeaChildAtoms([]);
+      setCurrentParentIdeaId(null);
+    }
   };
 
   const handleNavigateExpanded = async (direction: 'prev' | 'next') => {
@@ -327,12 +398,35 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             onUpdate={handleUpdateAtom}
             onDelete={handleDeleteAtom}
             onOpenAtom={async (atom) => {
-              // Maintain idea context if clicking a child atom from the current idea
-              if (currentParentIdeaId && currentIdeaChildAtoms.some(child => child.id === atom.id)) {
+              // Maintain idea context if clicking a child atom from the current idea or filtered idea
+              const isChildOfCurrentIdea = currentParentIdeaId && currentIdeaChildAtoms.some(child => child.id === atom.id);
+              const isChildOfFilteredIdea = selectedIdea && selectedIdea !== atom.id;
+              
+              if (isChildOfCurrentIdea) {
+                // Already have context, just open the atom
                 setExpandedAtomId(atom.id);
-                // Scroll to top smoothly when opening
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 onSelect(atom);
+              } else if (isChildOfFilteredIdea) {
+                // Check if this is a child of the filtered idea
+                try {
+                  const children = await fetchChildAtoms(selectedIdea);
+                  const isChild = children.some(child => child.id === atom.id);
+                  if (isChild) {
+                    // Set up context and open
+                    setCurrentParentIdeaId(selectedIdea);
+                    setCurrentIdeaChildAtoms(children);
+                    setExpandedAtomId(atom.id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    onSelect(atom);
+                  } else {
+                    // Not a child, open normally
+                    await handleAtomClick(atom);
+                  }
+                } catch (error) {
+                  console.error('Error fetching child atoms:', error);
+                  await handleAtomClick(atom);
+                }
               } else {
                 // Open atom normally, which will reset idea context if needed
                 await handleAtomClick(atom);
