@@ -852,11 +852,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           )}
           
           {hasMedia && (
-            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} max-h-[60vh] w-full`}>
+            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} min-h-[200px]`}>
               {isVideo ? (
                 <VideoPlayer
                   src={atom.media_source_link || ''}
-                  className="w-full h-full max-h-[60vh] object-contain"
+                  className="w-full h-full object-contain"
                   controls={true}
                   autoPlay={false}
                   muted={false}
@@ -865,7 +865,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 <img
                   src={atom.media_source_link ? getProxiedImageUrl(atom.media_source_link) : '/placeholder-image.png'}
                   alt={atom.title || 'Media'}
-                  className="w-full h-auto max-h-[60vh] object-contain"
+                  className="w-full h-full object-contain"
                   onLoad={(e) => {
                     const img = e.target as HTMLImageElement;
                     const container = img.parentElement;
