@@ -207,16 +207,21 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       
       // If it's an idea, fetch its child atoms for navigation
       if (atom.content_type === 'idea') {
-        setCurrentParentIdeaId(atom.id);
-        setIsLoadingChildAtoms(true);
-        try {
-          const children = await fetchChildAtoms(atom.id);
-          setCurrentIdeaChildAtoms(children);
-        } catch (error) {
-          console.error('Error fetching child atoms:', error);
-          setCurrentIdeaChildAtoms([]);
-        } finally {
-          setIsLoadingChildAtoms(false);
+        // If we're already filtering by this idea, use the existing context
+        if (selectedIdea === atom.id && currentParentIdeaId === atom.id && currentIdeaChildAtoms.length > 0) {
+          // Context already set up, no need to fetch again
+        } else {
+          setCurrentParentIdeaId(atom.id);
+          setIsLoadingChildAtoms(true);
+          try {
+            const children = await fetchChildAtoms(atom.id);
+            setCurrentIdeaChildAtoms(children);
+          } catch (error) {
+            console.error('Error fetching child atoms:', error);
+            setCurrentIdeaChildAtoms([]);
+          } finally {
+            setIsLoadingChildAtoms(false);
+          }
         }
       } else {
         // Check if this atom is a child of an idea we're viewing (either from current context or selectedIdea filter)
@@ -281,20 +286,30 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     
     const expandedAtom = atoms.find(atom => atom.id === expandedAtomId);
     
-    // If we have a parent idea context, navigate through its children
-    if (currentParentIdeaId && currentIdeaChildAtoms.length > 0) {
-      const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === currentParentIdeaId;
-      const currentChildIndex = currentIdeaChildAtoms.findIndex(atom => atom.id === expandedAtomId);
+    // If we have a parent idea context (either from current context or selectedIdea filter), navigate through its children
+    const effectiveParentIdeaId = currentParentIdeaId || selectedIdea;
+    const effectiveChildAtoms = currentIdeaChildAtoms.length > 0 ? currentIdeaChildAtoms : 
+      (selectedIdea && !isLoadingChildAtoms ? await fetchChildAtoms(selectedIdea).catch(() => []) : []);
+    
+    if (effectiveParentIdeaId && effectiveChildAtoms.length > 0) {
+      const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === effectiveParentIdeaId;
+      const currentChildIndex = effectiveChildAtoms.findIndex(atom => atom.id === expandedAtomId);
+      
+      // Update context if we're using selectedIdea but don't have current context set
+      if (selectedIdea && selectedIdea === effectiveParentIdeaId && currentParentIdeaId !== selectedIdea) {
+        setCurrentParentIdeaId(selectedIdea);
+        setCurrentIdeaChildAtoms(effectiveChildAtoms);
+      }
       
       if (isViewingIdea) {
         // Navigating from the idea itself - go to first/last child
         if (direction === 'next') {
-          const firstChild = currentIdeaChildAtoms[0];
+          const firstChild = effectiveChildAtoms[0];
           if (firstChild) {
             setExpandedAtomId(firstChild.id);
           }
         } else {
-          const lastChild = currentIdeaChildAtoms[currentIdeaChildAtoms.length - 1];
+          const lastChild = effectiveChildAtoms[effectiveChildAtoms.length - 1];
           if (lastChild) {
             setExpandedAtomId(lastChild.id);
           }
@@ -302,10 +317,10 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       } else if (currentChildIndex !== -1) {
         // Navigating through child atoms
         const newIndex = direction === 'prev' 
-          ? (currentChildIndex - 1 + currentIdeaChildAtoms.length) % currentIdeaChildAtoms.length
-          : (currentChildIndex + 1) % currentIdeaChildAtoms.length;
+          ? (currentChildIndex - 1 + effectiveChildAtoms.length) % effectiveChildAtoms.length
+          : (currentChildIndex + 1) % effectiveChildAtoms.length;
         
-        const newAtom = currentIdeaChildAtoms[newIndex];
+        const newAtom = effectiveChildAtoms[newIndex];
         setExpandedAtomId(newAtom.id);
       }
     } else {
@@ -370,9 +385,12 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
   const expandedIndex = expandedAtom ? atoms.findIndex(atom => atom.id === expandedAtomId) : -1;
   
   // Determine if we're in an idea context (viewing an idea or its children)
-  const isInIdeaContext = currentParentIdeaId !== null && currentIdeaChildAtoms.length > 0;
-  const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === currentParentIdeaId;
-  const currentChildIndex = isInIdeaContext ? currentIdeaChildAtoms.findIndex(atom => atom.id === expandedAtomId) : -1;
+  // Check both current context and selectedIdea filter
+  const effectiveParentIdeaId = currentParentIdeaId || selectedIdea;
+  const effectiveChildAtoms = currentIdeaChildAtoms.length > 0 ? currentIdeaChildAtoms : [];
+  const isInIdeaContext = effectiveParentIdeaId !== null && effectiveChildAtoms.length > 0;
+  const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === effectiveParentIdeaId;
+  const currentChildIndex = isInIdeaContext ? effectiveChildAtoms.findIndex(atom => atom.id === expandedAtomId) : -1;
   
   // If in idea context, navigation is through its children
   // Otherwise, normal navigation through all atoms
@@ -381,7 +399,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     : expandedIndex > 0;
   
   const hasNext = isInIdeaContext
-    ? isViewingIdea || currentChildIndex < currentIdeaChildAtoms.length - 1 // Can navigate to children or next child
+    ? isViewingIdea || currentChildIndex < effectiveChildAtoms.length - 1 // Can navigate to children or next child
     : expandedIndex < Math.min(visibleCount, atoms.length) - 1;
 
   return (
