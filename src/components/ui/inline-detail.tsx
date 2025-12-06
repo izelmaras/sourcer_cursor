@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon, FilterIcon, LightbulbIcon, MinusIcon, PlusIcon, LayersIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { XIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, BookIcon, FileTextIcon, ImageIcon, LinkIcon, ListIcon, MusicIcon, PlayCircleIcon, UtensilsIcon, VideoIcon, MapPinIcon, FileIcon, CopyIcon, FilterIcon, LightbulbIcon, MinusIcon, PlusIcon, LayersIcon } from "lucide-react";
 import { Database } from '../../types/supabase';
 import { useAtomStore } from "../../store/atoms";
 import { IconButton } from "./icon-button";
@@ -11,8 +11,7 @@ import { CreatorInfo } from "./creator-info";
 import { supabase } from '../../lib/supabase';
 import { VideoPlayer } from "./video-player";
 import { uploadMedia } from '../../lib/storage';
-import { isVideoUrl, isImageUrl } from '../../lib/utils';
-import { LiveLinkPreview } from './LiveLinkPreview';
+import { isVideoUrl } from '../../lib/utils';
 import { backgrounds, borders, text, icons, radius, tags as tagStyles, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
 import { useNavigate } from "react-router-dom";
 
@@ -81,7 +80,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
   const [isLoadingChildCount, setIsLoadingChildCount] = useState(false);
   const [childAtoms, setChildAtoms] = useState<Atom[]>([]);
   const [isLoadingChildAtoms, setIsLoadingChildAtoms] = useState(false);
-  const [visibleTagCount, setVisibleTagCount] = useState(20); // For lazy loading tags
 
   useEffect(() => {
     fetchTags();
@@ -188,7 +186,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         try {
           const children = await fetchChildAtoms(atom.id);
           setChildAtoms(children);
-          setVisibleTagCount(20); // Reset lazy loading when atom changes
         } catch (error) {
           console.error('Error fetching child atoms list:', error);
           setChildAtoms([]);
@@ -197,70 +194,12 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
         }
       } else {
         setChildAtoms([]);
-        setVisibleTagCount(20); // Reset lazy loading
       }
     };
     if (atom?.id) {
       fetchChildren();
     }
   }, [atom?.id, atom?.content_type, fetchChildAtoms]);
-
-  // Check if all child atoms are hidden (treat null as false)
-  const allChildAtomsHidden = childAtoms.length > 0 && childAtoms.every(a => a.hidden === true);
-  // Check if any child atom is hidden (treat null as false)
-  const anyChildAtomHidden = childAtoms.length > 0 && childAtoms.some(a => a.hidden === true);
-
-  // Hide/show all child atoms of an idea
-  const handleToggleHideAllChildAtoms = async () => {
-    if (!atom?.id || atom.content_type !== 'idea' || childAtoms.length === 0) return;
-    
-    try {
-      // If any are hidden, unhide all; otherwise hide all
-      const hideValue = !anyChildAtomHidden;
-      const childAtomIds = childAtoms.map(c => c.id);
-      
-      // Update all child atoms in the database - updateAtom already updates the store
-      await Promise.all(
-        childAtomIds.map(id => updateAtom(id, { hidden: hideValue }))
-      );
-      
-      // Update local childAtoms state immediately
-      setChildAtoms(prev => prev.map(a => ({ ...a, hidden: hideValue })));
-      
-      // The store is already updated by updateAtom, so the grid should automatically filter them out
-    } catch (error) {
-      console.error('Error toggling hide all child atoms:', error);
-    }
-  };
-
-  // Toggle hide/unhide for a specific child atom
-  const handleToggleHideChildAtom = async (childAtomId: number) => {
-    if (!atom?.id || atom.content_type !== 'idea') return;
-    
-    try {
-      // Find the current hidden state of this atom
-      const childAtom = childAtoms.find(a => a.id === childAtomId);
-      const currentHidden = childAtom?.hidden === true;
-      
-      // Toggle the hidden state
-      await updateAtom(childAtomId, { hidden: !currentHidden });
-      
-      // Update local state immediately for better UX
-      setChildAtoms(prev => prev.map(a => 
-        a.id === childAtomId 
-          ? { ...a, hidden: !currentHidden }
-          : a
-      ));
-      
-      // Refresh the child atoms list to ensure consistency
-      const children = await fetchChildAtoms(atom.id);
-      setChildAtoms(children);
-      
-      // The store is already updated by updateAtom, so the grid should automatically update
-    } catch (error) {
-      console.error('Error toggling hide child atom:', error);
-    }
-  };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft' && hasPrevious) {
@@ -488,7 +427,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
   if (!atom) return null;
 
-  const hasMedia = atom.media_source_link && (atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie');
+  const hasMedia = atom.media_source_link && (atom.content_type === 'image' || atom.content_type === 'video');
   const isVideo = hasMedia && isVideoUrl(atom.media_source_link || '');
 
   const filteredTags = tags
@@ -556,27 +495,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                   <span className={`text-xs ${text.primary}`}>{childAtomCount}</span>
                 )}
               </div>
-            </IconButton>
-          )}
-
-          {/* Hide/Show all inspirations for ideas */}
-          {atom?.content_type === 'idea' && (
-            <IconButton 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Eye icon clicked!', { childAtomsLength: childAtoms.length });
-                handleToggleHideAllChildAtoms();
-              }}
-              size="sm"
-              title={anyChildAtomHidden ? "Show all inspirations in grid" : "Hide all inspirations from grid"}
-              disabled={childAtoms.length === 0}
-            >
-              {anyChildAtomHidden ? (
-                <EyeOffIcon className={`w-4 h-4 ${icons.primary}`} />
-              ) : (
-                <EyeIcon className={`w-4 h-4 ${icons.primary}`} />
-              )}
             </IconButton>
           )}
           
@@ -835,7 +753,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 </div>
 
                 {/* Prompt field - only show for image and video types */}
-                {(atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie') && (
+                {(atom.content_type === 'image' || atom.content_type === 'video') && (
                   <div>
                     <label className={`block text-sm font-medium ${text.primary} mb-2`}>Prompt</label>
                     <textarea
@@ -852,11 +770,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           )}
           
           {hasMedia && (
-            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} max-h-[60vh] w-full`}>
+            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} min-h-[200px]`}>
               {isVideo ? (
                 <VideoPlayer
                   src={atom.media_source_link || ''}
-                  className="w-full h-full max-h-[60vh] object-contain"
+                  className="w-full h-full object-contain"
                   controls={true}
                   autoPlay={false}
                   muted={false}
@@ -865,7 +783,26 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 <img
                   src={atom.media_source_link || '/placeholder-image.png'}
                   alt={atom.title || 'Media'}
-                  className="w-full h-auto max-h-[60vh] object-contain"
+                  className="w-full h-full object-contain"
+                  onLoad={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    const container = img.parentElement;
+                    if (container && img.naturalWidth && img.naturalHeight) {
+                      const aspectRatio = img.naturalWidth / img.naturalHeight;
+                      const containerWidth = container.clientWidth;
+                      const containerHeight = container.clientHeight;
+                      
+                      // If image is wider than container aspect ratio, fit to width
+                      if (aspectRatio > containerWidth / containerHeight) {
+                        img.style.width = '100%';
+                        img.style.height = 'auto';
+                      } else {
+                        // If image is taller, fit to height
+                        img.style.width = 'auto';
+                        img.style.height = '100%';
+                      }
+                    }
+                  }}
                   onError={(e) => {
                     const img = e.currentTarget;
                     img.src = '/placeholder-image.png';
@@ -873,47 +810,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                   }}
                 />
               )}
-            </div>
-          )}
-
-          {/* Link Preview - for link content type */}
-          {atom.content_type === 'link' && atom.link && (
-            <div className="mb-4">
-              <a
-                href={atom.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block cursor-pointer hover:opacity-90 transition-opacity"
-              >
-                <div className={`relative ${backgrounds.layer1} ${radius.md} overflow-hidden ${borders.quaternary}`}>
-                  <LiveLinkPreview url={atom.link} height={400}>
-                    {/* Fallback: Use media_source_link if it's a proper image, otherwise use microlink screenshot */}
-                    {atom.media_source_link && isImageUrl(atom.media_source_link) ? (
-                      <img
-                        src={atom.media_source_link}
-                        alt={atom.title || 'Link preview'}
-                        className="w-full h-auto max-h-[400px] object-cover"
-                        onError={(e) => {
-                          // If media_source_link fails, try microlink screenshot
-                          const img = e.target as HTMLImageElement;
-                          if (atom.link) {
-                            img.src = `https://api.microlink.io/?url=${encodeURIComponent(atom.link)}&screenshot=true&embed=screenshot.url`;
-                          } else {
-                            img.style.display = 'none';
-                          }
-                        }}
-                      />
-                    ) : atom.link ? (
-                      <img
-                        src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link)}&screenshot=true&embed=screenshot.url`}
-                        alt={atom.title || 'Link preview'}
-                        className="w-full h-auto max-h-[400px] object-cover"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    ) : null}
-                  </LiveLinkPreview>
-                </div>
-              </a>
             </div>
           )}
 
@@ -957,16 +853,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                           navigate(`/detail/${childAtom.id}`);
                         }
                       }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        // Right-click does the same as left-click
-                        if (onOpenAtom) {
-                          onOpenAtom(childAtom);
-                        } else {
-                          onClose();
-                          navigate(`/detail/${childAtom.id}`);
-                        }
-                      }}
                     >
                       {/* Preview Image/Media */}
                       {childAtom.media_source_link ? (
@@ -1000,24 +886,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                           {childAtom.title || 'Untitled'}
                         </div>
                       </div>
-                      
-                      {/* Eye icon for toggling hide/unhide - always visible */}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleToggleHideChildAtom(childAtom.id);
-                        }}
-                        className="absolute top-2 right-2 z-20 p-1.5 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-colors"
-                        title={childAtom.hidden === true ? "Unhide this inspiration" : "Hide this inspiration"}
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        {childAtom.hidden === true ? (
-                          <EyeOffIcon className={`w-4 h-4 ${icons.primary}`} />
-                        ) : (
-                          <EyeIcon className={`w-4 h-4 ${icons.primary}`} />
-                        )}
-                      </button>
                     </div>
                     );
                   })}
@@ -1030,73 +898,8 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
             </div>
           )}
 
-          {/* Tags Ribbon - Only for idea atoms, showing tags from child atoms */}
-          {atom?.content_type === 'idea' && childAtoms.length > 0 && (
-            <div className="mb-6">
-              <h3 className={`text-sm font-medium ${text.primary} mb-3`}>
-                Tags from Inspirations
-              </h3>
-              {(() => {
-                // Collect all tags from child atoms with their most recent usage date
-                const tagMap = new Map<string, Date>();
-                childAtoms.forEach((childAtom) => {
-                  if (childAtom.tags && childAtom.tags.length > 0 && childAtom.created_at) {
-                    const tagDate = new Date(childAtom.created_at);
-                    childAtom.tags.forEach((tag) => {
-                      const normalizedTag = tag.toLowerCase().trim();
-                      const existingDate = tagMap.get(normalizedTag);
-                      if (!existingDate || tagDate > existingDate) {
-                        tagMap.set(normalizedTag, tagDate);
-                      }
-                    });
-                  }
-                });
-
-                // Convert to array and sort by most recent (newest first)
-                const sortedTags = Array.from(tagMap.entries())
-                  .sort((a, b) => b[1].getTime() - a[1].getTime())
-                  .map(([tag]) => tag);
-
-                if (sortedTags.length === 0) {
-                  return (
-                    <div className={`text-xs ${text.tertiary} text-center py-2`}>
-                      No tags from inspirations
-                    </div>
-                  );
-                }
-
-                const visibleTags = sortedTags.slice(0, visibleTagCount);
-                const hasMore = sortedTags.length > visibleTagCount;
-
-                return (
-                  <div className="relative">
-                    <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-                      {visibleTags.map((tag) => (
-                        <span
-                          key={tag}
-                          className={tagStyles?.variants?.clickable?.className || tagStyles?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors whitespace-nowrap'}
-                          onClick={() => handleTagSelect(tag)}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {hasMore && (
-                        <button
-                          onClick={() => setVisibleTagCount(prev => prev + 20)}
-                          className={`px-2 py-1 text-xs ${backgrounds.layer2} ${text.secondary} rounded-md border border-white/10 hover:bg-white/10 transition-colors whitespace-nowrap`}
-                        >
-                          +{sortedTags.length - visibleTagCount} more
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          {/* Prompt - only show for image, video, and movie types if populated (non-edit mode) */}
-          {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie') && (
+          {/* Prompt - only show for image and video types if populated (non-edit mode) */}
+          {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video') && (
             <div className="mb-4">
               <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Prompt</h3>
               <p className={`text-sm ${text.secondary} leading-relaxed ${backgrounds.layer2} p-3 ${radius.md} ${borders.tertiary}`}>
@@ -1152,12 +955,10 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     }
                   }}
                   size="sm"
-                  title={isEditingParentIdeas ? "Close edit mode" : parentIdeas.length === 0 ? "Add to idea" : "Edit ideas"}
+                  title={isEditingParentIdeas ? "Close edit mode" : "Edit ideas"}
                 >
                   {isEditingParentIdeas ? (
                     <XIcon className={`w-3 h-3 ${icons.primary}`} />
-                  ) : parentIdeas.length === 0 ? (
-                    <PlusIcon className={`w-3 h-3 ${icons.primary}`} />
                   ) : (
                     <PencilIcon className={`w-3 h-3 ${icons.primary}`} />
                   )}
@@ -1182,6 +983,9 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                     />
                     {availableIdeasForParents.length > 0 ? (
                       <div className="max-h-32 overflow-y-auto space-y-1 mt-2">
+                        <div className={`text-xs ${text.tertiary} mb-1`}>
+                          Click an idea to add this atom to it:
+                        </div>
                         {availableIdeasForParents.slice(0, 10).map((idea) => (
                           <div
                             key={idea.id}
@@ -1274,7 +1078,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                         </div>
                       ))}
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className={`text-xs ${text.tertiary} text-center py-2`}>
+                      Not part of any idea
+                    </div>
+                  )}
                 </div>
               )}
             </div>

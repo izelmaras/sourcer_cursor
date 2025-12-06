@@ -18,8 +18,6 @@ interface AddAndNavigationByAnimaProps {
   onShowOnlyFavoritesChange: (show: boolean) => void;
   searchMode: 'search' | 'creators';
   onSearchModeChange: (mode: 'search' | 'creators') => void;
-  selectedIdea?: number | null;
-  onIdeaFilterChange?: (ideaId: number | null) => void;
 }
 
 
@@ -35,9 +33,7 @@ export const AddAndNavigationByAnima = ({
   showOnlyFavorites,
   onShowOnlyFavoritesChange,
   searchMode,
-  onSearchModeChange,
-  selectedIdea,
-  onIdeaFilterChange
+  onSearchModeChange
 }: AddAndNavigationByAnimaProps): JSX.Element => {
   const { 
     categories,
@@ -50,8 +46,7 @@ export const AddAndNavigationByAnima = ({
     getCategoryTags,
     toggleTag,
     defaultCategoryId,
-    setDefaultCategory,
-    getChildAtomCount
+    setDefaultCategory
   } = useAtomStore();
 
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
@@ -282,54 +277,6 @@ export const AddAndNavigationByAnima = ({
                           : 'bg-white/8 text-white/80'
                       }`}>
                         {itemCount}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-        </div>
-
-        {/* Ideas Carousel - Separate Row */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide rounded-3xl">
-          {atoms
-            .filter(atom => atom.content_type === 'idea')
-            .sort((a, b) => {
-              // Sort by most recent first (by created_at)
-              const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-              const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-              return dateB - dateA;
-            })
-            .map((idea) => {
-              // Count child atoms for this idea using the store function
-              const childCount = getChildAtomCount(idea.id);
-              
-              return (
-                <button
-                  key={idea.id}
-                  onClick={() => {
-                    if (onIdeaFilterChange) {
-                      onIdeaFilterChange(selectedIdea === idea.id ? null : idea.id);
-                    }
-                  }}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-300 border backdrop-blur-sm ${
-                    selectedIdea === idea.id
-                      ? 'bg-orange-400/20 border-orange-300/30 text-white'
-                      : 'bg-white/8 hover:bg-white/10 text-white border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <LightbulbIcon className="w-4 h-4 flex-shrink-0" />
-                    <span className="font-medium text-sm whitespace-nowrap text-white truncate max-w-[200px]">
-                      {idea.title || `Idea #${idea.id}`}
-                    </span>
-                    {childCount > 0 && (
-                      <span className={`text-xs px-2 py-1 rounded-full backdrop-blur-sm ${
-                        selectedIdea === idea.id
-                          ? 'bg-orange-400/20 text-white'
-                          : 'bg-white/8 text-white/80'
-                      }`}>
-                        {childCount}
                       </span>
                     )}
                   </div>

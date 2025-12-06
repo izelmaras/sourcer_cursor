@@ -8,7 +8,7 @@ import { Database } from "../../../../types/supabase";
 import { LazyImage } from "../../../../components/ui/lazy-image";
 import { HtmlContent } from "../../../../components/ui/html-content";
 import { VideoPlayer } from "../../../../components/ui/video-player";
-import { getYouTubeVideoId, isVideoUrl, isImageUrl } from "../../../../lib/utils";
+import { getYouTubeVideoId, isVideoUrl } from "../../../../lib/utils";
 import { LiveLinkPreview } from "../../../../components/ui/LiveLinkPreview";
 import Masonry from 'react-masonry-css';
 import { VideoThumbnail } from "../../../../components/ui/video-thumbnail";
@@ -46,10 +46,6 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
   const lastLoadTimeRef = useRef<number>(0);
   const loadMoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [childAtomCounts, setChildAtomCounts] = useState<Map<number, number>>(new Map());
-  const [currentIdeaChildAtoms, setCurrentIdeaChildAtoms] = useState<Atom[]>([]);
-  const [isLoadingChildAtoms, setIsLoadingChildAtoms] = useState(false);
-  const [currentParentIdeaId, setCurrentParentIdeaId] = useState<number | null>(null);
-  const [videoHeights, setVideoHeights] = useState<Map<number, number>>(new Map());
 
   // Constants for rate limiting
   const MIN_LOAD_INTERVAL = 1000; // Minimum 1 second between loads
@@ -165,105 +161,31 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
     }
   }, [atoms, fetchChildAtoms]);
 
-  const handleAtomClick = async (atom: Atom) => {
+  const handleAtomClick = (atom: Atom) => {
     if (expandedAtomId === atom.id) {
       setExpandedAtomId(null); // Close if already expanded
-      setCurrentIdeaChildAtoms([]);
     } else {
       setExpandedAtomId(atom.id); // Expand this atom
       // Scroll to top smoothly when opening
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      
-      // If it's an idea, fetch its child atoms for navigation
-      if (atom.content_type === 'idea') {
-        setCurrentParentIdeaId(atom.id);
-        setIsLoadingChildAtoms(true);
-        try {
-          const children = await fetchChildAtoms(atom.id);
-          setCurrentIdeaChildAtoms(children);
-        } catch (error) {
-          console.error('Error fetching child atoms:', error);
-          setCurrentIdeaChildAtoms([]);
-        } finally {
-          setIsLoadingChildAtoms(false);
-        }
-      } else {
-        // Check if this atom is a child of an idea we're viewing
-        // If so, keep the parent idea context
-        const isChildOfCurrentIdea = currentIdeaChildAtoms.some(child => child.id === atom.id);
-        if (!isChildOfCurrentIdea) {
-          setCurrentParentIdeaId(null);
-          setCurrentIdeaChildAtoms([]);
-        }
-      }
     }
     onSelect(atom);
   };
 
   const handleCloseExpanded = () => {
     setExpandedAtomId(null);
-    setCurrentIdeaChildAtoms([]);
-    setCurrentParentIdeaId(null);
   };
 
-  const handleNavigateExpanded = async (direction: 'prev' | 'next') => {
-    if (!expandedAtomId) return;
+  const handleNavigateExpanded = (direction: 'prev' | 'next') => {
+    const currentIndex = atoms.findIndex(atom => atom.id === expandedAtomId);
+    if (currentIndex === -1) return;
     
-    const expandedAtom = atoms.find(atom => atom.id === expandedAtomId);
+    const newIndex = direction === 'prev' 
+      ? (currentIndex - 1 + atoms.length) % atoms.length
+      : (currentIndex + 1) % atoms.length;
     
-    // If we have a parent idea context, navigate through its children
-    if (currentParentIdeaId && currentIdeaChildAtoms.length > 0) {
-      const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === currentParentIdeaId;
-      const currentChildIndex = currentIdeaChildAtoms.findIndex(atom => atom.id === expandedAtomId);
-      
-      if (isViewingIdea) {
-        // Navigating from the idea itself - go to first/last child
-        if (direction === 'next') {
-          const firstChild = currentIdeaChildAtoms[0];
-          setExpandedAtomId(firstChild.id);
-        } else {
-          const lastChild = currentIdeaChildAtoms[currentIdeaChildAtoms.length - 1];
-          setExpandedAtomId(lastChild.id);
-        }
-      } else if (currentChildIndex !== -1) {
-        // Navigating through child atoms
-        const newIndex = direction === 'prev' 
-          ? (currentChildIndex - 1 + currentIdeaChildAtoms.length) % currentIdeaChildAtoms.length
-          : (currentChildIndex + 1) % currentIdeaChildAtoms.length;
-        
-        const newAtom = currentIdeaChildAtoms[newIndex];
-        setExpandedAtomId(newAtom.id);
-      }
-    } else {
-      // Normal navigation through all atoms
-      const currentIndex = atoms.findIndex(atom => atom.id === expandedAtomId);
-      if (currentIndex === -1) return;
-      
-      const newIndex = direction === 'prev' 
-        ? (currentIndex - 1 + atoms.length) % atoms.length
-        : (currentIndex + 1) % atoms.length;
-      
-      const newAtom = atoms[newIndex];
-      setExpandedAtomId(newAtom.id);
-      
-      // If the new atom is an idea, fetch its child atoms
-      if (newAtom.content_type === 'idea') {
-        setCurrentParentIdeaId(newAtom.id);
-        setIsLoadingChildAtoms(true);
-        try {
-          const children = await fetchChildAtoms(newAtom.id);
-          setCurrentIdeaChildAtoms(children);
-        } catch (error) {
-          console.error('Error fetching child atoms:', error);
-          setCurrentIdeaChildAtoms([]);
-        } finally {
-          setIsLoadingChildAtoms(false);
-        }
-      } else {
-        setCurrentParentIdeaId(null);
-        setCurrentIdeaChildAtoms([]);
-      }
-    }
+    const newAtom = atoms[newIndex];
+    setExpandedAtomId(newAtom.id);
   };
 
   const handleUpdateAtom = async (updatedAtom: Atom) => {
@@ -291,55 +213,24 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       .join(' ');
   };
 
-  // Find expanded atom - check both main atoms array and current idea's child atoms
-  const expandedAtom = expandedAtomId 
-    ? atoms.find(atom => atom.id === expandedAtomId) || 
-      currentIdeaChildAtoms.find(atom => atom.id === expandedAtomId) || 
-      null
-    : null;
+  const expandedAtom = expandedAtomId ? atoms.find(atom => atom.id === expandedAtomId) : null;
   const expandedIndex = expandedAtom ? atoms.findIndex(atom => atom.id === expandedAtomId) : -1;
-  
-  // Determine navigation state based on whether we're in an idea context
-  const isInIdeaContext = currentParentIdeaId !== null && currentIdeaChildAtoms.length > 0;
-  const isViewingIdea = expandedAtom?.content_type === 'idea' && expandedAtom.id === currentParentIdeaId;
-  const currentChildIndex = isInIdeaContext
-    ? currentIdeaChildAtoms.findIndex(atom => atom.id === expandedAtomId)
-    : -1;
-  
-  // If in idea context, navigation is through its children
-  // Otherwise, normal navigation through all atoms
-  const hasPrevious = isInIdeaContext
-    ? isViewingIdea || currentChildIndex > 0 // Can navigate to children or previous child
-    : expandedIndex > 0;
-  
-  const hasNext = isInIdeaContext
-    ? isViewingIdea || currentChildIndex < currentIdeaChildAtoms.length - 1 // Can navigate to children or next child
-    : expandedIndex < Math.min(visibleCount, atoms.length) - 1;
 
   return (
     <div className="w-full space-y-6">
       {/* Expanded Content Banner */}
       {expandedAtom && (
-        <div className="w-full animate-[fadeInSlideUp_0.2s_ease-out]">
+        <div className="w-full">
           <InlineDetail
             atom={expandedAtom}
             onClose={handleCloseExpanded}
             onNavigate={handleNavigateExpanded}
-            hasPrevious={hasPrevious}
-            hasNext={hasNext}
+            hasPrevious={expandedIndex > 0}
+            hasNext={expandedIndex < Math.min(visibleCount, atoms.length) - 1}
             onUpdate={handleUpdateAtom}
             onDelete={handleDeleteAtom}
-            onOpenAtom={async (atom) => {
-              // Maintain idea context if clicking a child atom from the current idea
-              if (currentParentIdeaId && currentIdeaChildAtoms.some(child => child.id === atom.id)) {
-                setExpandedAtomId(atom.id);
-                // Scroll to top smoothly when opening
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                onSelect(atom);
-              } else {
-                // Open atom normally, which will reset idea context if needed
-                await handleAtomClick(atom);
-              }
+            onOpenAtom={(atom) => {
+              handleAtomClick(atom);
             }}
           />
         </div>
@@ -416,25 +307,12 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                 } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
                 onClick={() => handleAtomClick(atom)}
               >
-                <div 
-                  className="relative w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden"
-                  style={{
-                    minHeight: videoHeights.get(atom.id) ? `${videoHeights.get(atom.id)}px` : '200px',
-                    maxHeight: '400px',
-                    height: videoHeights.get(atom.id) ? `${videoHeights.get(atom.id)}px` : 'auto'
-                  }}
-                >
+                <div className="relative w-full aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
                   {isDirectVideo ? (
                     <VideoThumbnail 
                       src={thumbnailUrl} 
                       alt={atom.title} 
-                      className="max-h-[400px] max-w-full transition-transform duration-300 group-hover:scale-105" 
-                      onVideoDimensions={(width, height) => {
-                        // Only set height for horizontal videos (width > height)
-                        if (width > height && height <= 400) {
-                          setVideoHeights(prev => new Map(prev).set(atom.id, height));
-                        }
-                      }}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
                     />
                   ) : thumbnailUrl ? (
                     <LazyImage
@@ -454,6 +332,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
 
           const isIdea = atom.content_type === 'idea';
           const isMovie = atom.content_type === 'movie';
+          const isNote = atom.content_type === 'note';
           const childCount = childAtomCounts.get(atom.id) || 0;
 
           return (
@@ -467,29 +346,18 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
               <GalleryTileContent className={`relative px-4 pb-6 pt-4 sm:px-5 sm:pb-8 sm:pt-5 flex flex-col min-h-[120px] text-white`}>
                 {atom.content_type === 'link' && atom.link && (
                   <div className="mb-2 flex justify-center">
-                    {atom.media_source_link && isImageUrl(atom.media_source_link) ? (
-                      // Use media_source_link if it's a proper image
-                      <img
-                        src={atom.media_source_link}
-                        alt={atom.title}
-                        className="w-full h-40 object-cover rounded"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    ) : (
-                      // Otherwise use link preview
-                      <LiveLinkPreview url={atom.link || ""} height={240}>
-                        {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
-                          <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
-                        ) : atom.link ? (
-                          <img
-                            src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
-                            alt={atom.title}
-                            className="w-full h-40 object-cover rounded"
-                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                      </LiveLinkPreview>
-                    )}
+                    <LiveLinkPreview url={atom.link || ""} height={240}>
+                      {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
+                        <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
+                      ) : atom.link ? (
+                        <img
+                          src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
+                          alt={atom.title}
+                          className="w-full h-40 object-cover rounded"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : null}
+                    </LiveLinkPreview>
                   </div>
                 )}
                 {isIdea && (
@@ -514,20 +382,36 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                   </div>
                 )}
                 <div className="flex-1 flex flex-col gap-2">
-                  {atom.title && atom.title !== ' ' && (
-                    <div className="space-y-1">
-                      <h4 className="text-sm sm:text-base font-medium break-words line-clamp-2 text-white">
-                        {atom.title}
-                      </h4>
-                      {atom.description && (
-                        <div>
-                          <HtmlContent 
-                            html={atom.description} 
-                            className="text-xs sm:text-sm break-words text-white/80"
-                          />
-                        </div>
-                      )}
-                    </div>
+                  {isNote ? (
+                    // For notes, show only description
+                    atom.description && (
+                      <div>
+                        <HtmlContent 
+                          html={atom.description} 
+                          className="text-sm sm:text-base break-words text-white/90"
+                        />
+                      </div>
+                    )
+                  ) : (
+                    // For other types, show title if it exists, then description
+                    // If no title, still show description if it exists
+                    ((atom.title && atom.title !== ' ') || atom.description) && (
+                      <div className="space-y-1">
+                        {atom.title && atom.title !== ' ' && (
+                          <h4 className="text-sm sm:text-base font-medium break-words line-clamp-2 text-white">
+                            {atom.title}
+                          </h4>
+                        )}
+                        {atom.description && (
+                          <div>
+                            <HtmlContent 
+                              html={atom.description} 
+                              className="text-xs sm:text-sm break-words text-white/80"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
                   )}
                   {atom.tags && atom.tags.filter(tag => tag.toLowerCase() !== 'link').length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-1">
@@ -572,7 +456,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             Load More ({visibleCount} of {atoms.length})
           </Button>
         ) : visibleCount >= atoms.length ? (
-          <div className={`${text.primary} text-sm`}>
+          <div className="text-gray-500 text-sm">
             Showing all {visibleCount} items
           </div>
         ) : null}
@@ -612,11 +496,6 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
 
   const filteredAtoms = useMemo(() => {
     let result = atoms.filter(atom => {
-      // Exclude hidden atoms from the grid (treat null/undefined as visible)
-      if (atom.hidden === true) {
-        return false;
-      }
-      
       const matchesSearch = searchTerm.toLowerCase() === '' || 
         atom.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         atom.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -659,11 +538,9 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
              (selectedTags.length === 0 || selectedTags.every(tag => tag === 'flagged' || tag === 'no-tag' || atomTags.includes(tag)));
     });
 
-    // Filter by idea: if selectedIdea is set, show the idea atom itself plus its children
+    // Filter by idea: if selectedIdea is set, only show atoms that are children of that idea
     if (selectedIdea && !isLoadingIdeaChildren) {
-      result = result.filter(atom => 
-        atom.id === selectedIdea || ideaChildAtomIds.has(atom.id)
-      );
+      result = result.filter(atom => ideaChildAtomIds.has(atom.id));
     }
 
     return result;

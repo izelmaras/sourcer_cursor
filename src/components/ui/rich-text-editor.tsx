@@ -10,7 +10,19 @@ interface RichTextEditorProps {
   className?: string;
 }
 
+// Utility function to strip HTML tags and get plain text
+const stripHtmlTags = (html: string): string => {
+  if (!html) return '';
+  // Create a temporary DOM element to extract text
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+};
+
 export const RichTextEditor = ({ value, onChange, placeholder = 'Write something...', className }: RichTextEditorProps) => {
+  // Normalize the initial value: if it contains HTML tags, extract plain text
+  const normalizedValue = value && value.includes('<') ? stripHtmlTags(value) : value;
+  
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -18,9 +30,11 @@ export const RichTextEditor = ({ value, onChange, placeholder = 'Write something
         placeholder,
       }),
     ],
-    content: value,
+    content: normalizedValue,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      // Extract plain text to avoid saving HTML tags like <p></p>
+      const plainText = editor.getText();
+      onChange(plainText);
     },
   });
 

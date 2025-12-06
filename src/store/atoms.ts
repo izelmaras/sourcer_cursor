@@ -80,7 +80,6 @@ interface AtomStore {
   creatorTags: CreatorTag[];
   selectedTags: string[];
   selectedCreators: string[];
-  selectedCreator: string | null;
   favoriteCreators: string[];
   showOnlyFavorites: boolean;
   loading: boolean;
@@ -101,7 +100,6 @@ interface AtomStore {
   fetchFavoriteCreators: () => Promise<void>;
   toggleFavoriteCreator: (creatorName: string) => Promise<void>;
   setSelectedCreators: (creators: string[]) => void;
-  setSelectedCreator: (creator: string | null) => void;
   setShowOnlyFavorites: (show: boolean) => void;
   addAtom: (atom: Omit<Database['public']['Tables']['atoms']['Insert'], 'id'>) => Promise<Atom | undefined>;
   updateAtom: (id: number, updates: Partial<Database['public']['Tables']['atoms']['Update']>) => Promise<void>;
@@ -144,7 +142,6 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   creatorTags: [],
   selectedTags: [],
   selectedCreators: [],
-  selectedCreator: null,
   favoriteCreators: [],
   showOnlyFavorites: false,
   loading: false,
@@ -338,17 +335,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   },
 
   setSelectedCreators: (creators: string[]) => {
-    set({ 
-      selectedCreators: creators,
-      selectedCreator: creators.length > 0 ? creators[0] : null
-    });
-  },
-
-  setSelectedCreator: (creator: string | null) => {
-    set({ 
-      selectedCreator: creator,
-      selectedCreators: creator ? [creator] : []
-    });
+    set({ selectedCreators: creators });
   },
 
   fetchFavoriteCreators: async () => {
@@ -413,15 +400,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
   addAtom: async (atom) => {
     try {
       // Normalize tags before adding
-      let normalizedTags = atom.tags?.map(normalizeTagName) || [];
-      
-      // Auto-tag ideas with a tag based on the idea title
-      if (atom.content_type === 'idea' && atom.title) {
-        const ideaTag = normalizeTagName(atom.title);
-        if (!normalizedTags.includes(ideaTag)) {
-          normalizedTags = [...normalizedTags, ideaTag];
-        }
-      }
+      const normalizedTags = atom.tags?.map(normalizeTagName);
       
       const { data, error } = await supabase
         .from('atoms')
@@ -502,46 +481,9 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
       const normalizedUpdates = { ...updates };
       if ('tags' in updates) {
         // If tags is explicitly provided (even if null or undefined), normalize it
-        let normalizedTags = updates.tags 
+        normalizedUpdates.tags = updates.tags 
           ? updates.tags.map(normalizeTagName).filter(Boolean)
           : [];
-        
-        // Auto-tag ideas with a tag based on the idea title
-        // Check if this is an idea and if title is being updated or we need to fetch current title
-        if (updates.content_type === 'idea' || (!updates.content_type && get().atoms.find(a => a.id === id)?.content_type === 'idea')) {
-          const currentAtom = get().atoms.find(a => a.id === id);
-          const ideaTitle = updates.title || currentAtom?.title;
-          if (ideaTitle) {
-            const ideaTag = normalizeTagName(ideaTitle);
-            if (!normalizedTags.includes(ideaTag)) {
-              normalizedTags = [...normalizedTags, ideaTag];
-            }
-          }
-        }
-        
-        normalizedUpdates.tags = normalizedTags;
-      } else if ('title' in updates || 'content_type' in updates) {
-        // If title or content_type is being updated for an idea, ensure the idea tag is present
-        const currentAtom = get().atoms.find(a => a.id === id);
-        if (currentAtom?.content_type === 'idea' || updates.content_type === 'idea') {
-          const ideaTitle = updates.title || currentAtom?.title;
-          if (ideaTitle) {
-            const currentTags = currentAtom?.tags?.map(normalizeTagName) || [];
-            const ideaTag = normalizeTagName(ideaTitle);
-            if (!currentTags.includes(ideaTag)) {
-              // Fetch current tags and add idea tag
-              const { data: atomData } = await supabase
-                .from('atoms')
-                .select('tags')
-                .eq('id', id)
-                .single();
-              const existingTags = atomData?.tags?.map(normalizeTagName) || [];
-              if (!existingTags.includes(ideaTag)) {
-                normalizedUpdates.tags = [...existingTags, ideaTag];
-              }
-            }
-          }
-        }
       }
       
       // Remove prompt field if it's empty or if the column doesn't exist in the database
@@ -555,13 +497,7 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         }
       }
       
-      // Ensure hidden field is explicitly included if provided (like categories use is_private)
-      if ('hidden' in updates) {
-        // Explicitly set to boolean true or false (not null/undefined)
-        normalizedUpdates.hidden = updates.hidden === true;
-      }
-      
-      console.log('normalizedUpdates (including hidden):', normalizedUpdates);
+      console.log('normalizedUpdates:', normalizedUpdates);
 
       // --- MULTI-CREATOR LOGIC START ---
       if (updates.creator_name) {
@@ -627,7 +563,6 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
         throw error;
       }
       console.log('Supabase update successful, returned data:', data);
-      console.log('Hidden value in returned data:', data?.hidden);
 
       // Use the data returned from Supabase to update local state
       // This ensures we have the exact values from the database
@@ -636,14 +571,14 @@ export const useAtomStore = create<AtomStore>((set, get) => ({
           atom.id === id ? { ...atom, ...data } : atom
         );
         set({ atoms });
-        console.log('Successfully updated atom in store with database data, hidden:', data.hidden);
+        console.log('Successfully updated atom in store with database data');
       } else {
         // Fallback to normalizedUpdates if no data returned
         const atoms = get().atoms.map((atom: Atom) =>
           atom.id === id ? { ...atom, ...normalizedUpdates } : atom
         );
         set({ atoms });
-        console.log('Successfully updated atom in store with normalized updates, hidden:', normalizedUpdates.hidden);
+        console.log('Successfully updated atom in store with normalized updates');
       }
     } catch (error) {
       console.error('Failed to update atom:', error);
