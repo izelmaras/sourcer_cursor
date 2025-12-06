@@ -46,6 +46,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
   const lastLoadTimeRef = useRef<number>(0);
   const loadMoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [childAtomCounts, setChildAtomCounts] = useState<Map<number, number>>(new Map());
+  const [videoHeights, setVideoHeights] = useState<Map<number, number>>(new Map());
 
   // Constants for rate limiting
   const MIN_LOAD_INTERVAL = 1000; // Minimum 1 second between loads
@@ -307,12 +308,25 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                 } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
                 onClick={() => handleAtomClick(atom)}
               >
-                <div className="relative w-full aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                <div 
+                  className="relative w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden"
+                  style={{
+                    minHeight: videoHeights.get(atom.id) ? `${videoHeights.get(atom.id)}px` : '200px',
+                    maxHeight: '400px',
+                    height: videoHeights.get(atom.id) ? `${videoHeights.get(atom.id)}px` : 'auto'
+                  }}
+                >
                   {isDirectVideo ? (
                     <VideoThumbnail 
                       src={thumbnailUrl} 
                       alt={atom.title} 
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                      className="max-h-[400px] max-w-full transition-transform duration-300 group-hover:scale-105" 
+                      onVideoDimensions={(width, height) => {
+                        // Only set height for horizontal videos (width > height)
+                        if (width > height && height <= 400) {
+                          setVideoHeights(prev => new Map(prev).set(atom.id, height));
+                        }
+                      }}
                     />
                   ) : thumbnailUrl ? (
                     <LazyImage
