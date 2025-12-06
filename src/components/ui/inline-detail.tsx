@@ -11,7 +11,7 @@ import { CreatorInfo } from "./creator-info";
 import { supabase } from '../../lib/supabase';
 import { VideoPlayer } from "./video-player";
 import { uploadMedia } from '../../lib/storage';
-import { isVideoUrl } from '../../lib/utils';
+import { isVideoUrl, getProxiedImageUrl } from '../../lib/utils';
 import { backgrounds, borders, text, icons, radius, tags as tagStyles, textarea as textareaTokens, utilities } from '../../lib/design-tokens';
 import { useNavigate } from "react-router-dom";
 
@@ -781,7 +781,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 />
               ) : (
                 <img
-                  src={atom.media_source_link || '/placeholder-image.png'}
+                  src={atom.media_source_link ? getProxiedImageUrl(atom.media_source_link) : '/placeholder-image.png'}
                   alt={atom.title || 'Media'}
                   className="w-full h-full object-contain"
                   onLoad={(e) => {
@@ -859,7 +859,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                         <div className="absolute inset-0 w-full h-full">
                           {childAtom.content_type === 'image' ? (
                             <img
-                              src={childAtom.media_source_link}
+                              src={getProxiedImageUrl(childAtom.media_source_link)}
                               alt={childAtom.title || 'Untitled'}
                               className="w-full h-full object-cover"
                               onError={(e) => {

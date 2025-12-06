@@ -48,7 +48,9 @@ export function isLikelyCorsRestricted(url: string): boolean {
       'media.',
       'assets.',
       'layers-uploads-prod.s3.eu-west-2.amazonaws.com',
-      'www.mercuryos.com'
+      'www.mercuryos.com',
+      'instagram.com',
+      'cdninstagram.com'
     ];
     
     return problematicDomains.some(domain => 
@@ -57,6 +59,38 @@ export function isLikelyCorsRestricted(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Check if an image URL needs proxying due to CORS restrictions
+export function isImageCorsRestricted(url: string): boolean {
+  if (!url) return false;
+  
+  try {
+    const urlObj = new URL(url);
+    const corsRestrictedDomains = [
+      'instagram.com',
+      'cdninstagram.com',
+      'fbcdn.net'
+    ];
+    
+    return corsRestrictedDomains.some(domain => 
+      urlObj.hostname.includes(domain) || urlObj.hostname.endsWith(domain)
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Get proxied image URL for CORS-restricted images
+export function getProxiedImageUrl(url: string): string {
+  if (!url) return url;
+  
+  if (isImageCorsRestricted(url)) {
+    // Use the image proxy API
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  
+  return url;
 }
 
 // Get video format from URL

@@ -8,7 +8,7 @@ import { Database } from "../../../../types/supabase";
 import { LazyImage } from "../../../../components/ui/lazy-image";
 import { HtmlContent } from "../../../../components/ui/html-content";
 import { VideoPlayer } from "../../../../components/ui/video-player";
-import { getYouTubeVideoId, isVideoUrl } from "../../../../lib/utils";
+import { getYouTubeVideoId, isVideoUrl, getProxiedImageUrl } from "../../../../lib/utils";
 import { LiveLinkPreview } from "../../../../components/ui/LiveLinkPreview";
 import Masonry from 'react-masonry-css';
 import { VideoThumbnail } from "../../../../components/ui/video-thumbnail";
@@ -348,7 +348,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                   <div className="mb-2 flex justify-center">
                     <LiveLinkPreview url={atom.link || ""} height={240}>
                       {typeof (atom as any).ogImage === 'string' && (atom as any).ogImage ? (
-                        <img src={(atom as any).ogImage} alt={atom.title} className="w-full h-40 object-cover rounded" />
+                        <img src={getProxiedImageUrl((atom as any).ogImage)} alt={atom.title} className="w-full h-40 object-cover rounded" />
                       ) : atom.link ? (
                         <img
                           src={`https://api.microlink.io/?url=${encodeURIComponent(atom.link || "")}&screenshot=true&embed=screenshot.url`}
@@ -397,20 +397,20 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                     // If no title, still show description if it exists
                     ((atom.title && atom.title !== ' ') || atom.description) && (
                       <div className="space-y-1">
-                        {atom.title && atom.title !== ' ' && (
-                          <h4 className="text-sm sm:text-base font-medium break-words line-clamp-2 text-white">
-                            {atom.title}
-                          </h4>
+                  {atom.title && atom.title !== ' ' && (
+                      <h4 className="text-sm sm:text-base font-medium break-words line-clamp-2 text-white">
+                        {atom.title}
+                      </h4>
                         )}
-                        {atom.description && (
-                          <div>
-                            <HtmlContent 
-                              html={atom.description} 
-                              className="text-xs sm:text-sm break-words text-white/80"
-                            />
-                          </div>
-                        )}
-                      </div>
+                      {atom.description && (
+                        <div>
+                          <HtmlContent 
+                            html={atom.description} 
+                            className="text-xs sm:text-sm break-words text-white/80"
+                          />
+                        </div>
+                      )}
+                    </div>
                     )
                   )}
                   {atom.tags && atom.tags.filter(tag => tag.toLowerCase() !== 'link').length > 0 && (

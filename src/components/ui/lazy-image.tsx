@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { cn } from '../../lib/utils';
+import { cn, getProxiedImageUrl } from '../../lib/utils';
 
 interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -11,6 +11,9 @@ export const LazyImage = ({ src, alt, className, ...props }: LazyImageProps) => 
   const [isInView, setIsInView] = useState(false);
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  
+  // Use proxied URL for CORS-restricted images (like Instagram)
+  const proxiedSrc = getProxiedImageUrl(src);
 
   useEffect(() => {
     const observer = new window.IntersectionObserver(
@@ -52,7 +55,7 @@ export const LazyImage = ({ src, alt, className, ...props }: LazyImageProps) => 
       )}
       <img
         ref={imgRef}
-        src={isInView ? src : undefined}
+        src={isInView ? proxiedSrc : undefined}
         alt={alt}
         className={cn(
           'transition-opacity duration-300 ease-in-out',

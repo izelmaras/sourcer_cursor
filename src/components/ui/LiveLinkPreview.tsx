@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getProxiedImageUrl } from '../../lib/utils';
 
 interface LiveLinkPreviewProps {
   url: string;
@@ -78,7 +79,7 @@ export const LiveLinkPreview: React.FC<LiveLinkPreviewProps> = ({ url, children,
   return (
     <div style={{ width: '100%', height, border: '1.5px solid #cbd5e1', borderRadius: 8 }} className="overflow-hidden bg-white flex flex-col">
       {imageUrl && (
-        <img src={imageUrl} alt={ogData.ogTitle || 'Preview'} style={{ width: '100%', height: '60%', objectFit: 'cover' }} />
+        <img src={getProxiedImageUrl(imageUrl)} alt={ogData.ogTitle || 'Preview'} style={{ width: '100%', height: '60%', objectFit: 'cover' }} />
       )}
       <div className="p-2 flex-1 flex flex-col justify-center">
         {ogData.ogTitle && <div className="font-semibold text-sm mb-1 line-clamp-1">{ogData.ogTitle}</div>}
