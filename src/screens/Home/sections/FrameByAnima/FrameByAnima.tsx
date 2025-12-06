@@ -608,6 +608,11 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
 
   const filteredAtoms = useMemo(() => {
     let result = atoms.filter(atom => {
+      // Exclude hidden atoms from the grid (treat null/undefined as visible)
+      if (atom.hidden === true) {
+        return false;
+      }
+      
       const matchesSearch = searchTerm.toLowerCase() === '' || 
         atom.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         atom.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
