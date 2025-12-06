@@ -325,8 +325,17 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             hasNext={hasNext}
             onUpdate={handleUpdateAtom}
             onDelete={handleDeleteAtom}
-            onOpenAtom={(atom) => {
-              handleAtomClick(atom);
+            onOpenAtom={async (atom) => {
+              // Maintain idea context if clicking a child atom from the current idea
+              if (currentParentIdeaId && currentIdeaChildAtoms.some(child => child.id === atom.id)) {
+                setExpandedAtomId(atom.id);
+                // Scroll to top smoothly when opening
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                onSelect(atom);
+              } else {
+                // Open atom normally, which will reset idea context if needed
+                await handleAtomClick(atom);
+              }
             }}
           />
         </div>
