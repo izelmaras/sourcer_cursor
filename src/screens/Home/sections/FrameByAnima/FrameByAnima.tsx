@@ -650,9 +650,11 @@ export const GallerySection = ({ searchTerm, selectedContentTypes, selectedCreat
              (selectedTags.length === 0 || selectedTags.every(tag => tag === 'flagged' || tag === 'no-tag' || atomTags.includes(tag)));
     });
 
-    // Filter by idea: if selectedIdea is set, only show atoms that are children of that idea
+    // Filter by idea: if selectedIdea is set, show the idea atom itself plus its children
     if (selectedIdea && !isLoadingIdeaChildren) {
-      result = result.filter(atom => ideaChildAtomIds.has(atom.id));
+      result = result.filter(atom => 
+        atom.id === selectedIdea || ideaChildAtomIds.has(atom.id)
+      );
     }
 
     return result;
