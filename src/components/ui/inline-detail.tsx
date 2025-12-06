@@ -855,11 +855,11 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           )}
           
           {hasMedia && (
-            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} min-h-[200px]`}>
+            <div className={`relative ${backgrounds.layer1} flex items-center justify-center ${radius.md} overflow-hidden mb-4 ${borders.quaternary} min-h-[200px] max-h-[60vh]`}>
               {isVideo ? (
                 <VideoPlayer
                   src={atom.media_source_link || ''}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain max-h-[60vh]"
                   controls={true}
                   autoPlay={false}
                   muted={false}
@@ -868,23 +868,25 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 <img
                   src={atom.media_source_link ? getProxiedImageUrl(atom.media_source_link) : '/placeholder-image.png'}
                   alt={atom.title || 'Media'}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain max-h-[60vh]"
                   onLoad={(e) => {
                     const img = e.target as HTMLImageElement;
                     const container = img.parentElement;
                     if (container && img.naturalWidth && img.naturalHeight) {
                       const aspectRatio = img.naturalWidth / img.naturalHeight;
                       const containerWidth = container.clientWidth;
-                      const containerHeight = container.clientHeight;
+                      const containerHeight = Math.min(container.clientHeight, window.innerHeight * 0.6); // Limit to 60vh
                       
                       // If image is wider than container aspect ratio, fit to width
                       if (aspectRatio > containerWidth / containerHeight) {
                         img.style.width = '100%';
                         img.style.height = 'auto';
+                        img.style.maxHeight = '60vh';
                       } else {
-                        // If image is taller, fit to height
+                        // If image is taller, fit to height (but respect viewport limit)
                         img.style.width = 'auto';
                         img.style.height = '100%';
+                        img.style.maxHeight = '60vh';
                       }
                     }
                   }}
