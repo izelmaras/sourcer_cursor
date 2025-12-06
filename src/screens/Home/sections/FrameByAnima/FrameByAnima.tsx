@@ -416,15 +416,40 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             onUpdate={handleUpdateAtom}
             onDelete={handleDeleteAtom}
             onOpenAtom={async (atom) => {
+              // Check if we're currently viewing an idea detail
+              const isViewingIdea = expandedAtom?.content_type === 'idea';
+              const viewingIdeaId = isViewingIdea ? expandedAtom.id : null;
+              
               // Maintain idea context if clicking a child atom from the current idea or filtered idea
               const isChildOfCurrentIdea = currentParentIdeaId && currentIdeaChildAtoms.some(child => child.id === atom.id);
-              const isChildOfFilteredIdea = selectedIdea && selectedIdea !== atom.id;
+              const isChildOfViewingIdea = viewingIdeaId && viewingIdeaId !== atom.id;
+              const isChildOfFilteredIdea = selectedIdea && selectedIdea !== atom.id && !viewingIdeaId;
               
               if (isChildOfCurrentIdea) {
                 // Already have context, just open the atom
                 setExpandedAtomId(atom.id);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 onSelect(atom);
+              } else if (isChildOfViewingIdea) {
+                // Clicking a child of the currently viewed idea - fetch children and set up context
+                try {
+                  const children = await fetchChildAtoms(viewingIdeaId);
+                  const isChild = children.some(child => child.id === atom.id);
+                  if (isChild) {
+                    // Set up context and open the child atom
+                    setCurrentParentIdeaId(viewingIdeaId);
+                    setCurrentIdeaChildAtoms(children);
+                    setExpandedAtomId(atom.id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    onSelect(atom);
+                  } else {
+                    // Not a child, open normally
+                    await handleAtomClick(atom);
+                  }
+                } catch (error) {
+                  console.error('Error fetching child atoms:', error);
+                  await handleAtomClick(atom);
+                }
               } else if (isChildOfFilteredIdea) {
                 // Check if this is a child of the filtered idea
                 try {
