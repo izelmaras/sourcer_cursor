@@ -235,7 +235,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
   // Toggle hide/unhide for a specific child atom
   const handleToggleHideChildAtom = async (childAtomId: number) => {
-    if (!atom?.id || atom.content_type === 'idea') return;
+    if (!atom?.id || atom.content_type !== 'idea') return;
     
     try {
       // Find the current hidden state of this atom
@@ -968,6 +968,24 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                           {childAtom.title || 'Untitled'}
                         </div>
                       </div>
+                      
+                      {/* Eye icon for toggling hide/unhide - always visible */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToggleHideChildAtom(childAtom.id);
+                        }}
+                        className="absolute top-2 right-2 z-20 p-1.5 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-colors"
+                        title={childAtom.hidden === true ? "Unhide this inspiration" : "Hide this inspiration"}
+                        style={{ pointerEvents: 'auto' }}
+                      >
+                        {childAtom.hidden === true ? (
+                          <EyeOffIcon className={`w-4 h-4 ${icons.primary}`} />
+                        ) : (
+                          <EyeIcon className={`w-4 h-4 ${icons.primary}`} />
+                        )}
+                      </button>
                     </div>
                     );
                   })}
@@ -980,8 +998,73 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
             </div>
           )}
 
-          {/* Prompt - only show for image and video types if populated (non-edit mode) */}
-          {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video') && (
+          {/* Tags Ribbon - Only for idea atoms, showing tags from child atoms */}
+          {atom?.content_type === 'idea' && childAtoms.length > 0 && (
+            <div className="mb-6">
+              <h3 className={`text-sm font-medium ${text.primary} mb-3`}>
+                Tags from Inspirations
+              </h3>
+              {(() => {
+                // Collect all tags from child atoms with their most recent usage date
+                const tagMap = new Map<string, Date>();
+                childAtoms.forEach((childAtom) => {
+                  if (childAtom.tags && childAtom.tags.length > 0 && childAtom.created_at) {
+                    const tagDate = new Date(childAtom.created_at);
+                    childAtom.tags.forEach((tag) => {
+                      const normalizedTag = tag.toLowerCase().trim();
+                      const existingDate = tagMap.get(normalizedTag);
+                      if (!existingDate || tagDate > existingDate) {
+                        tagMap.set(normalizedTag, tagDate);
+                      }
+                    });
+                  }
+                });
+
+                // Convert to array and sort by most recent (newest first)
+                const sortedTags = Array.from(tagMap.entries())
+                  .sort((a, b) => b[1].getTime() - a[1].getTime())
+                  .map(([tag]) => tag);
+
+                if (sortedTags.length === 0) {
+                  return (
+                    <div className={`text-xs ${text.tertiary} text-center py-2`}>
+                      No tags from inspirations
+                    </div>
+                  );
+                }
+
+                const visibleTags = sortedTags.slice(0, visibleTagCount);
+                const hasMore = sortedTags.length > visibleTagCount;
+
+                return (
+                  <div className="relative">
+                    <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+                      {visibleTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={tagStyles?.variants?.clickable?.className || tagStyles?.clickable?.className || 'px-2 py-1 text-xs bg-white/8 backdrop-blur-sm text-white/90 rounded-md border border-white/10 cursor-pointer hover:bg-white/15 transition-colors whitespace-nowrap'}
+                          onClick={() => handleTagSelect(tag)}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {hasMore && (
+                        <button
+                          onClick={() => setVisibleTagCount(prev => prev + 20)}
+                          className={`px-2 py-1 text-xs ${backgrounds.layer2} ${text.secondary} rounded-md border border-white/10 hover:bg-white/10 transition-colors whitespace-nowrap`}
+                        >
+                          +{sortedTags.length - visibleTagCount} more
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Prompt - only show for image, video, and movie types if populated (non-edit mode) */}
+          {!isEditing && atom.prompt && (atom.content_type === 'image' || atom.content_type === 'video' || atom.content_type === 'movie') && (
             <div className="mb-4">
               <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Prompt</h3>
               <p className={`text-sm ${text.secondary} leading-relaxed ${backgrounds.layer2} p-3 ${radius.md} ${borders.tertiary}`}>
