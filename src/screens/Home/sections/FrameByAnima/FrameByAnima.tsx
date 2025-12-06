@@ -293,7 +293,10 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
       .join(' ');
   };
 
-  const expandedAtom = expandedAtomId ? atoms.find(atom => atom.id === expandedAtomId) : null;
+  const expandedAtom = expandedAtomId 
+    ? atoms.find(atom => atom.id === expandedAtomId) || 
+      currentIdeaChildAtoms.find(atom => atom.id === expandedAtomId) 
+    : null;
   const expandedIndex = expandedAtomId ? atoms.findIndex(atom => atom.id === expandedAtomId) : -1;
   
   // Determine if we're in an idea context (viewing an idea or its children)
