@@ -1,29 +1,53 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-// Validate environment variables with more detailed error messages
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-if (!supabaseUrl) {
-  throw new Error('Missing VITE_SUPABASE_URL environment variable. Please check your .env file.');
-}
-if (!supabaseAnonKey) {
-  throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable. Please check your .env file.');
+// Lazy initialization to allow error boundary to catch errors
+let supabaseClient: SupabaseClient<Database> | null = null;
+
+function getSupabaseClient(): SupabaseClient<Database> {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  // Validate environment variables with more detailed error messages
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl) {
+    throw new Error('Missing VITE_SUPABASE_URL environment variable. Please check your .env file.');
+  }
+  if (!supabaseAnonKey) {
+    throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable. Please check your .env file.');
+  }
+
+  // Create the Supabase client with retry configuration
+  supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+    db: {
+      schema: 'public'
+    },
+    global: {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  });
+
+  return supabaseClient;
 }
 
-// Create the Supabase client with retry configuration
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  db: {
-    schema: 'public'
-  },
-  global: {
-    headers: {
-      'Content-Type': 'application/json'
+// Export supabase as a getter that throws errors after React mounts
+export const supabase = new Proxy({} as SupabaseClient<Database>, {
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    const value = (client as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
     }
+    return value;
   }
 });
 
@@ -107,23 +131,16 @@ export const initializeData = async () => {
 };
 
 // Initialize connection test with better error handling
-testConnection().then(success => {
-  if (!success) {
-    console.error('Initial database connection test failed - please check your Supabase configuration and network connection');
-    // You might want to show this error to the user in the UI
-    document.body.innerHTML = `
-      <div style="padding: 20px; font-family: system-ui, -apple-system, sans-serif;">
-        <h1 style="color: #ef4444;">Connection Error</h1>
-        <p>Unable to connect to the database. Please check:</p>
-        <ul>
-          <li>Your Supabase credentials in the .env file</li>
-          <li>Your network connection</li>
-          <li>That your Supabase instance is running</li>
-        </ul>
-        <p>Check the browser console for more details.</p>
-      </div>
-    `;
-  } else {
-    console.log('Initial database connection test successful');
-  }
-});
+// Wrapped in try-catch to prevent unhandled promise rejections
+testConnection()
+  .then(success => {
+    if (!success) {
+      console.error('Initial database connection test failed - please check your Supabase configuration and network connection');
+    } else {
+      console.log('Initial database connection test successful');
+    }
+  })
+  .catch(error => {
+    console.error('Error during initial connection test:', error);
+    // Error will be caught by error boundary when supabase is actually used
+  });

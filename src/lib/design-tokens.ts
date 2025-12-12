@@ -307,6 +307,40 @@ export const modals = {
 };
 
 // ============================================================================
+// UTILITY CLASSES
+// ============================================================================
+export const utilities = {
+  // Transitions
+  transition: {
+    all: 'transition-all duration-300',
+    colors: 'transition-colors duration-200',
+    fast: 'transition-all duration-150',
+  },
+  
+  // Shadows
+  shadow: {
+    none: 'shadow-none',
+    sm: 'shadow-sm',
+    md: 'shadow-md',
+    lg: 'shadow-lg',
+    xl: 'shadow-xl',
+    '2xl': 'shadow-2xl',
+    // Responsive shadows (lighter on tablet)
+    card: 'shadow-xl md:shadow-lg', // Lighter on tablet
+    cardStrong: 'shadow-2xl md:shadow-xl', // Lighter on tablet
+  },
+  
+  // Backdrop blur
+  blur: {
+    sm: 'backdrop-blur-sm',
+    md: 'backdrop-blur-md',
+    lg: 'backdrop-blur-lg',
+    xl: 'backdrop-blur-xl',
+    '2xl': 'backdrop-blur-2xl',
+  },
+};
+
+// ============================================================================
 // CARD STYLES
 // ============================================================================
 export const cards = {
@@ -477,40 +511,6 @@ export const dropdowns = {
       text.primary,
       backgrounds.hover.layer3,
     ].join(' '),
-  },
-};
-
-// ============================================================================
-// UTILITY CLASSES
-// ============================================================================
-export const utilities = {
-  // Transitions
-  transition: {
-    all: 'transition-all duration-300',
-    colors: 'transition-colors duration-200',
-    fast: 'transition-all duration-150',
-  },
-  
-  // Shadows
-  shadow: {
-    none: 'shadow-none',
-    sm: 'shadow-sm',
-    md: 'shadow-md',
-    lg: 'shadow-lg',
-    xl: 'shadow-xl',
-    '2xl': 'shadow-2xl',
-    // Responsive shadows (lighter on tablet)
-    card: 'shadow-xl md:shadow-lg', // Lighter on tablet
-    cardStrong: 'shadow-2xl md:shadow-xl', // Lighter on tablet
-  },
-  
-  // Backdrop blur
-  blur: {
-    sm: 'backdrop-blur-sm',
-    md: 'backdrop-blur-md',
-    lg: 'backdrop-blur-lg',
-    xl: 'backdrop-blur-xl',
-    '2xl': 'backdrop-blur-2xl',
   },
 };
 
