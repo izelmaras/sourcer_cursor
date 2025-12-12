@@ -1284,7 +1284,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {atom.tags && atom.tags.length > 0 && (
             <div className="mb-6">
               <h3 className={`text-sm font-medium ${text.primary} mb-2`}>Tags</h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 md:gap-3">
                 {atom.tags.map((tag) => (
                   <span
                     key={tag}

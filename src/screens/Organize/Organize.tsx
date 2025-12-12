@@ -580,7 +580,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
               <ModalWrapper className="max-h-[90vh] sm:max-h-[80vh] h-auto flex flex-col">
               <ModalHeader className="flex-none pb-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-                  <div className="flex flex-wrap gap-1 sm:gap-2">
+                  <div className="flex flex-wrap gap-1 sm:gap-2 md:gap-3">
                     <Button
                       size="sm"
                       selected={selectedType === 'Categories'}

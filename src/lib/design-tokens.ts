@@ -374,6 +374,7 @@ export const searchBar = {
       radius.searchBar,
       'border transition-all duration-300',
       'focus:outline-none focus:border-white/30',
+      'shadow-none',
       backgrounds.layer2,
       borders.secondary,
       text.primary,

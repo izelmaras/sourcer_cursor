@@ -250,7 +250,7 @@ export const AddAndNavigationByAnima = ({
 
 
         {/* Category Carousel */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide rounded-3xl px-2 md:px-6">
+        <div className="flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide rounded-3xl">
           {categories
             .filter(category => !category.is_private) // Only show public categories
             .map((category) => {
@@ -291,7 +291,7 @@ export const AddAndNavigationByAnima = ({
         </div>
 
         {/* Ideas Carousel - Separate Row */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide rounded-3xl px-2 md:px-6">
+        <div className="flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide rounded-3xl">
           {atoms
             .filter(atom => atom.content_type === 'idea')
             .sort((a, b) => {
@@ -340,7 +340,7 @@ export const AddAndNavigationByAnima = ({
 
         {/* Tags Row - appears when a category is selected */}
         {defaultCategoryId && (
-          <div className="flex flex-wrap gap-2 rounded-3xl px-2 md:px-6">
+          <div className="flex flex-wrap gap-2 md:gap-3 rounded-3xl">
             {(() => {
               const selectedCategory = categories.find(c => c.id === defaultCategoryId);
               if (!selectedCategory) return null;

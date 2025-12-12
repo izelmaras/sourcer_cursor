@@ -118,6 +118,15 @@
   }
 }
 
+/* Remove inner shadow from search inputs on tablet */
+input[type="text"],
+input[type="search"] {
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
