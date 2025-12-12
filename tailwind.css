@@ -127,22 +127,6 @@ input[type="search"] {
   appearance: none;
 }
 
-/* Ensure gap property works on tablet for flex containers with pills/buttons */
-@media (min-width: 768px) {
-  /* Force gap to work on tablet - ensure flex containers with gap-2 get gap-3 on tablet */
-  .flex.flex-wrap.gap-2:not([class*="md:gap"]) {
-    gap: 0.75rem !important; /* gap-3 (12px) on tablet */
-  }
-  
-  .flex.flex-wrap.gap-1:not([class*="md:gap"]) {
-    gap: 0.5rem !important; /* gap-2 (8px) on tablet */
-  }
-  
-  .flex.flex-wrap.gap-1\.5:not([class*="md:gap"]) {
-    gap: 0.625rem !important; /* gap-2.5 (10px) on tablet */
-  }
-}
-
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;

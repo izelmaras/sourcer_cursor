@@ -661,7 +661,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                 
                 <div>
                   <label className={`block text-sm font-medium ${text.primary} mb-2`}>Content Type</label>
-                  <div className="flex flex-wrap gap-2 md:gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {contentTypes.map((type) => (
                       <button
                         key={type.type}
@@ -684,7 +684,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
                 <div>
                   <label className={`block text-sm font-medium ${text.primary} mb-2`}>Creators</label>
-                  <div className="flex flex-wrap gap-2 md:gap-3 mb-2">
+                  <div className="flex flex-wrap gap-2 mb-2">
                     {editCreators.map((creator, index) => (
                       <span
                         key={index}
@@ -743,7 +743,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
                 <div>
                   <label className={`block text-sm font-medium ${text.primary} mb-2`}>Tags</label>
-                  <div className="flex flex-wrap gap-2 md:gap-3 mb-2">
+                  <div className="flex flex-wrap gap-2 mb-2">
                     {editTags.map((tag, index) => (
                       <span
                         key={index}
@@ -1043,7 +1043,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
 
                 return (
                   <div className="relative">
-                    <div className="flex flex-wrap gap-2 md:gap-3 overflow-x-auto pb-2">
+                    <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
                       {visibleTags.map((tag) => (
                         <span
                           key={tag}

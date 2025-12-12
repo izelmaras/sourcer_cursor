@@ -172,7 +172,7 @@ export const Home = (): JSX.Element => {
             />
 
             {hasActiveFilters ? (
-              <div className="flex flex-wrap gap-2 md:gap-3 p-4 md:p-5 bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-xl md:shadow-lg">
+              <div className="flex flex-wrap gap-2 p-4 md:p-5 bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-xl md:shadow-lg">
                 {selectedContentTypes.map(type => (
                   <Button
                     key={type}

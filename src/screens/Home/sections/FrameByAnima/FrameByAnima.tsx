@@ -534,7 +534,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
                     )
                   )}
                   {atom.tags && atom.tags.filter(tag => tag.toLowerCase() !== 'link').length > 0 && (
-                    <div className="flex flex-wrap gap-2 md:gap-3 mb-1">
+                    <div className="flex flex-wrap gap-2 mb-1">
                       {atom.tags.filter(tag => tag.toLowerCase() !== 'link').map((tag, index, arr) => (
                         <span key={index} className="text-xs text-white/70">
                           {capitalizeTag(tag)}

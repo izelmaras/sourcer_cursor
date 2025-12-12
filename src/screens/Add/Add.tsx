@@ -270,7 +270,7 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <label className="block text-sm font-medium text-white/80">Content type</label>
-                    <div className="flex flex-wrap gap-2 md:gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {orderedTypes.map(type => (
                         <button
                           key={type.type}
@@ -355,7 +355,7 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
                     />
 
                     {selectedTags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 md:gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {selectedTags.map((tag) => (
                           <Button
                             key={tag}
@@ -416,7 +416,7 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
                     />
 
                     {selectedCreators.length > 0 && (
-                      <div className="flex flex-wrap gap-2 md:gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {selectedCreators.map((creator) => (
                           <Button
                             key={creator}
@@ -476,7 +476,7 @@ export const Add = ({ open, onClose }: AddProps): JSX.Element => {
                     />
 
                     {selectedIdeas.length > 0 && (
-                      <div className="flex flex-wrap gap-2 md:gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {selectedIdeas.map((ideaId) => {
                           const idea = ideaAtoms.find(i => i.id === ideaId);
                           return idea ? (

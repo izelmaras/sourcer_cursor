@@ -396,7 +396,7 @@ export const AddAndNavigationByAnima = ({
         <div className="bg-white/8 backdrop-blur-sm rounded-3xl border border-white/10 shadow-2xl">
           <div className="p-6 space-y-6">
             {/* Content Types */}
-            <div className="flex flex-wrap gap-2 md:gap-3">
+            <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
                 selected={selectedContentTypes.length === 0}
