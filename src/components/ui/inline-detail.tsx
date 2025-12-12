@@ -541,7 +541,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           </h2>
         </div>
         
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
           {/* Filter icon for ideas */}
           {atom?.content_type === 'idea' && (
             <IconButton 
@@ -634,7 +634,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex flex-col lg:flex-row">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
         {/* Media Section */}
         <div className="flex-1 p-4">
           {/* Edit Mode - appears above image when editing */}
@@ -917,7 +917,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
               {isLoadingChildAtoms ? (
                 <div className={`text-xs ${text.tertiary} text-center py-2`}>Loading...</div>
               ) : childAtoms.length > 0 ? (
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
                   {childAtoms.map((childAtom) => {
                     // Generate consistent random rotation between -15 and 15 degrees based on atom ID
                     const rotation = ((childAtom.id * 137.508) % 30) - 15;
@@ -1112,7 +1112,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
           {/* Parent Ideas - Only for non-idea atoms */}
           {atom?.content_type !== 'idea' && (
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between gap-2 mb-2">
                 <h3 className={`text-sm font-medium ${text.primary}`}>
                   Ideas
                   {isLoadingParentIdeas && <span className="text-xs text-white/50">(loading...)</span>}
@@ -1159,7 +1159,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                         {availableIdeasForParents.slice(0, 10).map((idea) => (
                           <div
                             key={idea.id}
-                            className="flex items-center justify-between p-2 hover:bg-white/10 rounded cursor-pointer border border-transparent hover:border-white/20 transition-all"
+                            className="flex items-center justify-between gap-2 p-2 hover:bg-white/10 rounded cursor-pointer border border-transparent hover:border-white/20 transition-all"
                             onClick={() => handleAddParentIdea(idea.id)}
                           >
                             <div className="flex-1 min-w-0">
@@ -1167,7 +1167,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                                 {idea.title}
                               </div>
                             </div>
-                            <PlusIcon className={`w-3 h-3 ${icons.secondary} ml-2 flex-shrink-0`} />
+                            <PlusIcon className={`w-3 h-3 ${icons.secondary} flex-shrink-0`} />
                           </div>
                         ))}
                       </div>
@@ -1191,7 +1191,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                       {parentIdeas.map((idea) => (
                         <div
                           key={idea.id}
-                          className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10 hover:bg-white/10 transition-colors"
+                          className="flex items-center justify-between gap-2 p-2 bg-white/5 rounded border border-white/10 hover:bg-white/10 transition-colors"
                         >
                           <div
                             className="flex-1 min-w-0 cursor-pointer"
@@ -1211,7 +1211,6 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                           <IconButton
                             onClick={() => handleRemoveParentIdea(idea.id)}
                             size="sm"
-                            className="ml-2"
                             title="Remove from this idea"
                           >
                             <MinusIcon className={`w-3 h-3 ${icons.secondary}`} />
@@ -1230,7 +1229,7 @@ export const InlineDetail: React.FC<InlineDetailProps> = ({
                       {parentIdeas.map((idea) => (
                         <div
                           key={idea.id}
-                          className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                          className="flex items-center justify-between gap-2 p-2 bg-white/5 rounded border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
                           onClick={() => {
                             if (onOpenAtom) {
                               onOpenAtom(idea);
