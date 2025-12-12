@@ -13,7 +13,7 @@ export const TagList = ({ tags, onTagClick }: TagListProps): JSX.Element => {
   if (!tags.length) return null;
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 md:gap-3">
       {tags.filter(Boolean).map((tag) => (
         <Button
           key={tag}

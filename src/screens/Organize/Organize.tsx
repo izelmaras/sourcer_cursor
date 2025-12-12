@@ -540,7 +540,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
         </div>
         {selectedType === OrganizeType.Creators && (
           <>
-            <div className="flex flex-wrap gap-2 mt-1">
+            <div className="flex flex-wrap gap-2 md:gap-3 mt-1">
               {'link_1' in item && item.link_1 && (
                 <a href={item.link_1} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 text-sm ${text.tertiary} ${text.hover}`}><LinkIcon className={`h-3 w-3 ${icons.primary}`} />Link 1</a>
               )}
@@ -552,7 +552,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
               )}
             </div>
             {/* Show tags under creator links */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap gap-1.5 md:gap-2 mt-2">
               {getCreatorTags(item.id).map(tag => (
                 <button
                   key={tag.id}
@@ -675,7 +675,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                   Uncategorized Tags
                                   <span className="text-sm text-white/60">({uncategorizedTags.length})</span>
                                 </h3>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 md:gap-3">
                                   {uncategorizedTags.map((tag) => (
                                     <button
                                       key={tag.id}
@@ -703,7 +703,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                                 {category.description && (
                                   <p className="text-white/60 text-sm mb-3">{category.description}</p>
                                 )}
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 md:gap-3">
                                   {tags.map((tag) => (
                                     <button
                                       key={tag.id}
@@ -764,7 +764,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                             setEditingLinks={setEditingLinks}
                           />
                           {editingId !== item.id && (
-                            <div className="flex flex-wrap gap-2 justify-end sm:justify-start">
+                            <div className="flex flex-wrap gap-2 md:gap-3 justify-end sm:justify-start">
                               {(isCategory(item) || isTag(item)) && (
                                 <IconButton
                                   size="sm"
@@ -869,7 +869,7 @@ export const Organize = ({ open, onClose, initialType = 'Categories', onCreatorS
                             />
 
                             {selectedTags.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-1.5 md:gap-2">
                                 {selectedTags.map((tag) => (
                                   <span
                                     key={tag}
