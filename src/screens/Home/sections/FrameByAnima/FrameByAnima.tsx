@@ -14,7 +14,7 @@ import Masonry from 'react-masonry-css';
 import { VideoThumbnail } from "../../../../components/ui/video-thumbnail";
 import { Button } from "../../../../components/ui/button";
 import { InlineDetail } from "../../../../components/ui/inline-detail";
-import { backgrounds, borders, text, radius } from "../../../../lib/design-tokens";
+import { backgrounds, borders, text, radius, utilities, spacing as spacingTokens, cards as cardTokens } from "../../../../lib/design-tokens";
 
 type Atom = Database['public']['Tables']['atoms']['Row'];
 
@@ -352,7 +352,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
           768: 2,
           0: 1
         }}
-        className="flex w-full gap-3"
+        className={`flex w-full ${spacingTokens.masonry.gap}`}
         columnClassName="masonry-column"
       >
         {atoms.slice(0, visibleCount).map((atom) => {
@@ -368,7 +368,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             return (
               <GalleryTile
                 key={atom.id}
-                className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group bg-white/5 backdrop-blur-sm shadow-2xl border border-white/10 hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
+                className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group bg-white/5 backdrop-blur-sm ${utilities.shadow.cardStrong} border border-white/10 select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
                   isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
                 } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
                 onClick={() => handleAtomClick(atom)}
@@ -409,7 +409,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
             return (
               <GalleryTile
                 key={atom.id}
-                className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group bg-white/5 backdrop-blur-sm shadow-2xl border border-white/10 hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
+                className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group bg-white/5 backdrop-blur-sm ${utilities.shadow.cardStrong} border border-white/10 select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
                   isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
                 } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
                 onClick={() => handleAtomClick(atom)}
@@ -458,12 +458,12 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
           return (
             <GalleryTile
               key={atom.id}
-              className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group ${isIdea ? 'bg-gradient-to-br from-orange-400/10 via-orange-300/5 to-transparent border-orange-300/20' : 'bg-white/5 backdrop-blur-sm border border-white/10'} shadow-2xl hover:shadow-2xl select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
+              className={`relative break-inside-avoid p-0 overflow-hidden cursor-pointer group ${isIdea ? 'bg-gradient-to-br from-orange-400/10 via-orange-300/5 to-transparent border-orange-300/20' : 'bg-white/5 backdrop-blur-sm border border-white/10'} ${utilities.shadow.cardStrong} select-none focus:outline-none transition-all duration-300 hover:scale-[1.02] ${
                 isDeleting ? 'opacity-50 animate-pulse pointer-events-none' : ''
               } ${isExpanded ? 'ring-2 ring-white/40' : ''}`}
               onClick={() => handleAtomClick(atom)}
             >
-              <GalleryTileContent className={`relative px-4 pb-6 pt-4 sm:px-5 sm:pb-8 sm:pt-5 flex flex-col min-h-[120px] text-white`}>
+              <GalleryTileContent className={`relative ${cardTokens.spacing.padding} flex flex-col min-h-[120px] text-white`}>
                 {atom.content_type === 'link' && atom.link && (
                   <div className="mb-2 flex justify-center">
                     <LiveLinkPreview url={atom.link || ""} height={240}>

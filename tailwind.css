@@ -84,6 +84,12 @@
   gap: 12px;
 }
 
+@media (min-width: 768px) {
+  .masonry-column {
+    gap: 20px; /* 5 * 4px = 20px for md:gap-5 */
+  }
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;

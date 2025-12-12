@@ -318,11 +318,16 @@ export const cards = {
       'hover:scale-[1.02]',
       backgrounds.layer2,
       borders.tertiary,
-      'shadow-2xl',
+      utilities.shadow.cardStrong,
     ].join(' '),
   },
   
   hover: backgrounds.hover.layer1,
+  
+  // Responsive spacing for card content
+  spacing: {
+    padding: 'px-4 pb-6 pt-4 sm:px-5 sm:pb-8 sm:pt-5 md:px-6 md:pb-8 md:pt-6',
+  },
 };
 
 // ============================================================================
@@ -494,6 +499,9 @@ export const utilities = {
     lg: 'shadow-lg',
     xl: 'shadow-xl',
     '2xl': 'shadow-2xl',
+    // Responsive shadows (lighter on tablet)
+    card: 'shadow-xl md:shadow-lg', // Lighter on tablet
+    cardStrong: 'shadow-2xl md:shadow-xl', // Lighter on tablet
   },
   
   // Backdrop blur
@@ -584,6 +592,10 @@ export const spacing = {
   stack: 'space-y-6',
   cluster: 'space-x-2',
   wrap: 'gap-2',
+  // Responsive gaps for masonry/grid layouts
+  masonry: {
+    gap: 'gap-3 md:gap-5', // Larger gap on tablet
+  },
   inset: {
     sm: 'p-2',
     md: 'p-4',
