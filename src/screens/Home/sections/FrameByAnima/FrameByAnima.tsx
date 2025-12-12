@@ -352,7 +352,7 @@ const Gallery = memo(({ atoms, onSelect, searchTerm, selectedContentTypes, selec
           768: 2,
           0: 1
         }}
-        className={`flex w-full ${spacingTokens.masonry.gap}`}
+        className="my-masonry-grid flex w-full"
         columnClassName="masonry-column"
       >
         {atoms.slice(0, visibleCount).map((atom) => {

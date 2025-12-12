@@ -86,7 +86,29 @@
 
 @media (min-width: 768px) {
   .masonry-column {
-    gap: 20px; /* 5 * 4px = 20px for md:gap-5 */
+    gap: 20px; /* Vertical gap within columns on tablet */
+  }
+}
+
+/* Horizontal spacing between masonry columns */
+/* react-masonry-css creates columns as direct children */
+.my-masonry-grid {
+  margin-left: -12px; /* Negative margin to offset column padding */
+}
+
+.my-masonry-grid > div {
+  padding-left: 12px; /* Horizontal spacing between columns */
+  margin-bottom: 12px;
+}
+
+@media (min-width: 768px) {
+  .my-masonry-grid {
+    margin-left: -20px; /* Negative margin to offset column padding on tablet */
+  }
+  
+  .my-masonry-grid > div {
+    padding-left: 20px; /* Larger horizontal spacing on tablet */
+    margin-bottom: 20px;
   }
 }
 
