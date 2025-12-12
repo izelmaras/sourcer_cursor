@@ -154,7 +154,7 @@ export const Home = (): JSX.Element => {
       {/* Main content with glassmorphism */}
       <div className="relative z-10 min-h-screen bg-white/6 backdrop-blur-md">
         <main className="flex flex-col items-center w-full min-h-screen">
-          <div className="w-full max-w-7xl space-y-6 p-6">
+          <div className="w-full max-w-7xl space-y-6 p-4 md:p-6">
             <AddAndNavigationByAnima
               onViewChange={() => {}} 
               searchTerm={searchTerm}
