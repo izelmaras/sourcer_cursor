@@ -81,12 +81,20 @@
 .masonry-column {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+}
+
+/* Vertical spacing between items in masonry columns */
+.masonry-column > * {
+  margin-bottom: 12px;
+}
+
+.masonry-column > *:last-child {
+  margin-bottom: 0;
 }
 
 @media (min-width: 768px) {
-  .masonry-column {
-    gap: 20px; /* Vertical gap within columns on tablet */
+  .masonry-column > * {
+    margin-bottom: 20px; /* Larger vertical gap on tablet */
   }
 }
 
@@ -98,7 +106,6 @@
 
 .my-masonry-grid > div {
   padding-left: 12px; /* Horizontal spacing between columns */
-  margin-bottom: 12px;
 }
 
 @media (min-width: 768px) {
@@ -108,7 +115,6 @@
   
   .my-masonry-grid > div {
     padding-left: 20px; /* Larger horizontal spacing on tablet */
-    margin-bottom: 20px;
   }
 }
 
